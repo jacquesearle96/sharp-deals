@@ -10,7 +10,8 @@ export interface SyncConfig {
 }
 
 export function syncConfig(env: { VITE_SUPABASE_URL?: string; VITE_SUPABASE_ANON_KEY?: string } = import.meta.env): SyncConfig | null {
-  const url = env.VITE_SUPABASE_URL?.replace(/\/+$/, '')
+  // Accept the project URL or the Data API URL copied from the dashboard (…/rest/v1/).
+  const url = env.VITE_SUPABASE_URL?.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '')
   const anonKey = env.VITE_SUPABASE_ANON_KEY
   return url && anonKey ? { url, anonKey } : null
 }

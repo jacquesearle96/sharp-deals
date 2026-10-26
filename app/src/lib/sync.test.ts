@@ -22,6 +22,9 @@ describe('syncConfig', () => {
     expect(syncConfig({})).toBeNull()
     expect(syncConfig({ VITE_SUPABASE_URL: 'https://x.supabase.co' })).toBeNull()
   })
+  it('accepts the Data API URL copied from the dashboard', () => {
+    expect(syncConfig({ VITE_SUPABASE_URL: 'https://x.supabase.co/rest/v1/', VITE_SUPABASE_ANON_KEY: 'k' })?.url).toBe('https://x.supabase.co')
+  })
   it('trims a trailing slash from the URL', () => {
     expect(syncConfig({ VITE_SUPABASE_URL: 'https://x.supabase.co/', VITE_SUPABASE_ANON_KEY: 'k' })).toEqual({ url: 'https://x.supabase.co', anonKey: 'k' })
   })
