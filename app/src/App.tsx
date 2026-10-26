@@ -16,7 +16,7 @@ const SEARCH_DEFAULTS: Filters = { text: '', stores: [], multiBuyOnly: false, so
 const TOP_DEFAULTS: Filters = { text: '', stores: [], multiBuyOnly: true, sort: 'saving' }
 
 export default function App() {
-  const { state, mini } = useDeals()
+  const { state, mini, updated } = useDeals()
   const list = useShoppingList()
   const [tab, setTab] = useState<Tab>('search')
   // The big Baby and Tech catalogue only loads once someone opens that tab.
@@ -45,6 +45,11 @@ export default function App() {
             <p className="text-xs text-muted">Updated {ago(state.index.generatedAt)}</p>
           )}
         </div>
+        {updated && (
+          <p role="status" className="mt-2 rounded-xl bg-ok/15 px-3 py-1.5 text-center text-sm font-semibold text-ok">
+            ✨ New deals loaded
+          </p>
+        )}
       </header>
 
       <main className="space-y-4 px-4">
