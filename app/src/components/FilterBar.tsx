@@ -1,4 +1,4 @@
-import { STORES, type StoreId } from '../../../shared/types.ts'
+import { DEAL_STORES, type StoreId } from '../../../shared/types.ts'
 import type { Filters, SortKey } from '../lib/query.ts'
 import { STORE_INFO } from '../lib/stores.ts'
 
@@ -41,7 +41,7 @@ export function FilterBar({ filters, onChange, counts, hideSearch }: Props) {
       )}
 
       <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-        {STORES.map((id) => {
+        {DEAL_STORES.map((id) => {
           const on = filters.stores.includes(id)
           return (
             <button

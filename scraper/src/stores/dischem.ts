@@ -2,22 +2,14 @@ import { chromium, type Page } from 'playwright';
 import { effectivePrice, isMultiBuy, parsePromo } from '../../../shared/promo.ts';
 import type { Category, Product } from '../../../shared/types.ts';
 import type { StoreAdapter } from '../adapter.ts';
-import { sleep } from '../http.ts';
+import { crawlMagentoListing, type MagentoTile } from '../magento.ts';
 
 const ORIGIN = 'https://www.dischem.co.za';
 const MAX_PAGES_PER_LISTING = 40;
 const MAX_CAMPAIGNS = 12;
 const DELAY_MS = 1000;
 
-export interface Tile {
-  name: string;
-  href: string;
-  /** current price in rand */
-  price: number;
-  /** price before the special, in rand */
-  oldPrice?: number;
-  image?: string;
-}
+export type Tile = MagentoTile;
 
 export interface Campaign {
   promoText: string;
@@ -80,33 +72,8 @@ export function mapTile(tile: Tile, campaign: Campaign | undefined, scrapedAt: s
   };
 }
 
-async function readTiles(page: Page): Promise<Tile[]> {
-  return page.evaluate(() =>
-    [...document.querySelectorAll('li.product-item')].map((t) => ({
-      name: t.querySelector('a.product-item-link')?.textContent?.trim() ?? '',
-      href: t.querySelector('a.product-item-link')?.getAttribute('href') ?? '',
-      price: parseFloat(t.querySelector('[data-price-type="finalPrice"]')?.getAttribute('data-price-amount') ?? '0'),
-      oldPrice: parseFloat(t.querySelector('[data-price-type="oldPrice"]')?.getAttribute('data-price-amount') ?? '0') || undefined,
-      image: t.querySelector('img.product-image-photo')?.getAttribute('src') ?? undefined,
-    })),
-  );
-}
-
-/** Walks a Magento listing page by page, stopping when a page adds nothing new. */
-async function crawlListing(page: Page, url: string, seen: Set<string>): Promise<Tile[]> {
-  const out: Tile[] = [];
-  for (let p = 1; p <= MAX_PAGES_PER_LISTING; p++) {
-    await page.goto(`${url}${url.includes('?') ? '&' : '?'}p=${p}`, { waitUntil: 'domcontentloaded' });
-    const found = await page.waitForSelector('li.product-item', { timeout: 20_000 }).then(() => true, () => false);
-    if (!found) break;
-    const fresh = (await readTiles(page)).filter((t) => t.href && !seen.has(t.href));
-    if (fresh.length === 0) break;
-    for (const t of fresh) seen.add(t.href);
-    out.push(...fresh);
-    await sleep(DELAY_MS);
-  }
-  return out;
-}
+const crawlListing = (page: Page, url: string, seen: Set<string>) =>
+  crawlMagentoListing(page, url, seen, { maxPages: MAX_PAGES_PER_LISTING, delayMs: DELAY_MS });
 
 export const dischem: StoreAdapter = {
   store: 'dischem',

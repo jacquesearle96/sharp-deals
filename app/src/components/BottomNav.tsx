@@ -1,7 +1,7 @@
 export type Tab = 'search' | 'deals' | 'shop' | 'list'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'search', label: 'Groceries', icon: '🔍' },
+  { id: 'search', label: 'Deals', icon: '🔍' },
   { id: 'deals', label: 'Top deals', icon: '🔥' },
   { id: 'shop', label: 'Shop around', icon: '🛍️' },
   { id: 'list', label: 'My list', icon: '🧺' },

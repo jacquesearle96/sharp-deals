@@ -1,6 +1,13 @@
-export type StoreId = 'checkers' | 'pnp' | 'woolworths' | 'spar' | 'clicks' | 'dischem';
+export type GroceryStoreId = 'checkers' | 'pnp' | 'woolworths' | 'spar' | 'clicks' | 'dischem';
+export type ShopStoreId = 'babycity' | 'babiesrus' | 'evetech' | 'takealot' | 'incredible';
+export type StoreId = GroceryStoreId | ShopStoreId;
 
-export const STORES: StoreId[] = ['pnp', 'checkers', 'woolworths', 'spar', 'clicks', 'dischem'];
+/** Stores behind the grocery deals tabs. */
+export const STORES: GroceryStoreId[] = ['pnp', 'checkers', 'woolworths', 'spar', 'clicks', 'dischem'];
+/** Stores whose specials show on the main deals tabs: the groceries plus the two baby shops. */
+export const DEAL_STORES: StoreId[] = [...STORES, 'babycity', 'babiesrus'];
+/** Stores behind the Shop around tab (baby and tech). */
+export const SHOP_STORES: ShopStoreId[] = ['babycity', 'babiesrus', 'evetech', 'takealot', 'incredible'];
 
 export type Category = 'grocery' | 'health' | 'baby' | 'tech';
 

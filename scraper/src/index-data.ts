@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { STORES, type DealIndex, type DealProduct, type Product, type StoreRun } from '../../shared/types.ts';
+import { DEAL_STORES, SHOP_STORES, STORES, type DealIndex, type DealProduct, type Product, type StoreRun } from '../../shared/types.ts';
 
 const isDeal = (p: Product) => p.promo.kind !== 'none' || (p.wasPrice !== undefined && p.wasPrice > p.price);
 
@@ -19,15 +19,27 @@ const readJson = async <T>(path: string): Promise<T | undefined> => {
   }
 };
 
-/** Merges every store file in `dir` into one compact deals-only index the app loads. */
+/** Merges the grocery and baby-shop specials into the one compact deals-only index the main tabs load. */
 export async function buildIndex(dir: string, runs: StoreRun[]): Promise<DealIndex> {
   const products: DealProduct[] = [];
-  for (const store of STORES) {
+  for (const store of DEAL_STORES) {
     const items = await readJson<Product[]>(join(dir, `${store}.json`));
     if (items) products.push(...items.filter(isDeal).map(toDeal));
   }
-  const index: DealIndex = { generatedAt: new Date().toISOString(), runs, products };
+  const index: DealIndex = { generatedAt: new Date().toISOString(), runs: runs.filter((r) => DEAL_STORES.includes(r.store)), products };
   await writeFile(join(dir, 'index.json'), JSON.stringify(index));
+  return index;
+}
+
+/** Merges the baby and tech shops into shop-index.json. Unlike groceries, every product is kept so any search can find it. */
+export async function buildShopIndex(dir: string, runs: StoreRun[]): Promise<DealIndex> {
+  const products: DealProduct[] = [];
+  for (const store of SHOP_STORES) {
+    const items = await readJson<Product[]>(join(dir, `${store}.json`));
+    if (items) products.push(...items.map(toDeal));
+  }
+  const index: DealIndex = { generatedAt: new Date().toISOString(), runs: runs.filter((r) => (SHOP_STORES as string[]).includes(r.store)), products };
+  await writeFile(join(dir, 'shop-index.json'), JSON.stringify(index));
   return index;
 }
 
@@ -40,5 +52,5 @@ export async function mergeRuns(dir: string, current: StoreRun[]): Promise<Store
     // A failed run keeps the last good timestamp visible alongside the error.
     byStore.set(r.store, r.ok || !before ? r : { ...before, error: r.error });
   }
-  return STORES.flatMap((s) => (byStore.has(s) ? [byStore.get(s)!] : []));
+  return [...STORES, ...SHOP_STORES].flatMap((s) => (byStore.has(s) ? [byStore.get(s)!] : []));
 }

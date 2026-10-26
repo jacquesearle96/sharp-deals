@@ -14,4 +14,9 @@ export const STORE_INFO: Record<StoreId, StoreInfo> = {
   spar: { id: 'spar', name: 'Spar', color: '#0a9b4b' },
   clicks: { id: 'clicks', name: 'Clicks', color: '#0099cc' },
   dischem: { id: 'dischem', name: 'Dis-Chem', color: '#00a19b' },
+  babycity: { id: 'babycity', name: 'Baby City', color: '#ec4899' },
+  babiesrus: { id: 'babiesrus', name: 'Babies R Us', color: '#0ea5e9' },
+  evetech: { id: 'evetech', name: 'Evetech', color: '#0f766e' },
+  takealot: { id: 'takealot', name: 'Takealot', color: '#0b79bf' },
+  incredible: { id: 'incredible', name: 'Incredible Connection', color: '#7c3aed' },
 }
