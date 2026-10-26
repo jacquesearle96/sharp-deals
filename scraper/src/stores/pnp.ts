@@ -3,6 +3,7 @@ import { chromium, type Page } from 'playwright';
 import type { Category, Product } from '../../../shared/types.ts';
 import type { StoreAdapter } from '../adapter.ts';
 import { sleep } from '../http.ts';
+import { activeTerms } from '../terms.ts';
 
 const BASE = 'https://www.pnp.co.za/pnphybris/v2/pnp-spa/products/search';
 /** Cape Town store; prices and promos are per store. */
@@ -14,15 +15,6 @@ const DELAY_MS = 800;
 const FIELDS =
   'products(code,name,price(FULL),images(DEFAULT),available,potentialPromotions(FULL),categoryNames),pagination(DEFAULT)';
 
-/** Search terms that together sweep the grocery aisles. */
-export const TERMS = [
-  'milk', 'bread', 'eggs', 'butter', 'cheese', 'yoghurt', 'cream', 'chicken', 'beef', 'pork', 'sausage',
-  'bacon', 'fish', 'rice', 'pasta', 'flour', 'sugar', 'oil', 'cereal', 'oats', 'coffee', 'tea', 'juice',
-  'cooldrink', 'water', 'beer', 'wine', 'chocolate', 'sweets', 'chips', 'biscuits', 'nuts', 'fruit',
-  'vegetables', 'frozen', 'ice cream', 'pizza', 'soup', 'sauce', 'tinned', 'toilet paper', 'detergent',
-  'dishwashing', 'cleaning', 'toothpaste', 'shampoo', 'soap', 'deodorant', 'nappies', 'baby food',
-  'dog food', 'cat food',
-];
 
 interface RawProduct {
   code: string;
@@ -100,7 +92,7 @@ export const pnp: StoreAdapter = {
       const page = await browser.newPage();
       await page.goto('https://www.pnp.co.za/', { waitUntil: 'domcontentloaded' });
       await page.waitForTimeout(3000);
-      for (const term of TERMS) {
+      for (const term of activeTerms) {
         for (let pageNo = 0; pageNo < MAX_PAGES_PER_TERM; pageNo++) {
           const res = await searchInPage(page, term, pageNo);
           for (const raw of res.products ?? []) {
