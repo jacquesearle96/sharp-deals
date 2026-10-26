@@ -1,0 +1,109 @@
+name: Scrape and deploy
+
+# Scrapes every store, rebuilds the app with the fresh data and publishes it to GitHub Pages.
+# Latest data (and the price history) lives on a single-commit "data" branch so the repo does not grow.
+on:
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours (UTC)
+  workflow_dispatch:
+    inputs:
+      stores:
+        description: 'Only scrape these (e.g. "pnp spar", "grocery" or "shop"). Leave empty for everything.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write # push the data branch
+  pages: write
+  id-token: write
+
+# One run at a time, so two scrapes never overwrite each other's history.
+concurrency:
+  group: scrape-and-deploy
+  cancel-in-progress: false
+
+jobs:
+  scrape-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            scraper/package-lock.json
+
+      - name: Restore the previous data and price history
+        run: |
+          mkdir -p app/public/data
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git fetch --depth=1 origin data
+            git archive FETCH_HEAD | tar -x -C app/public/data
+            echo "Restored previous data:"; ls app/public/data
+          else
+            echo "No data branch yet: starting fresh."
+          fi
+
+      - name: Install scraper and browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+        working-directory: scraper
+
+      - name: Scrape
+        id: scrape
+        # A store that fails keeps its previous data, so one blocked site never stops the rest.
+        continue-on-error: true
+        run: node src/run.ts $STORES
+        working-directory: scraper
+        env:
+          STORES: ${{ github.event.inputs.stores }}
+
+      - name: Save the data branch
+        run: |
+          cd app/public/data
+          ls
+          git init -q -b data
+          git config user.name "sharp-deals-bot"
+          git config user.email "sharp-deals-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Data $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data
+
+      - name: Build the app
+        run: |
+          npm ci
+          npm run build
+        working-directory: app
+        env:
+          # Served from https://<user>.github.io/<repo>/
+          BASE: /${{ github.event.repository.name }}/
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Drop the raw per-store files from the site
+        # The app only reads index.json, shop-index.json, runs.json and history/.
+        run: rm -f pnp.json checkers.json woolworths.json spar.json clicks.json dischem.json babycity.json babiesrus.json
+        working-directory: app/dist/data
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+      - name: Report scrape problems
+        if: steps.scrape.outcome == 'failure'
+        run: echo "::warning::At least one store failed to scrape. The app shows its last good data. See the Scrape step log."
+
+  deploy:
+    needs: scrape-build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
