@@ -43,6 +43,14 @@ describe('queryDeals', () => {
   it('keeps only multi-buys when asked, ignoring plain discounts', () => {
     expect(ids({ multiBuyOnly: true }).sort()).toEqual(['1', '2'])
   })
+  it('keeps only discounted or multi-buy items when onSaleOnly is set', () => {
+    const plain = deal({ id: '5', name: 'Plain Cot Sheet', store: 'pnp', price: 120, effectivePrice: 120, savePct: 0 })
+    const all = [...DEALS, plain]
+    const hits = queryDeals(all, buildSearch(all), { ...base, onSaleOnly: true }).map((d) => d.id)
+    expect(hits).not.toContain('5')
+    expect(hits).toHaveLength(4)
+    expect(queryDeals(all, buildSearch(all), base).map((d) => d.id)).toContain('5')
+  })
   it('sorts by lowest effective price', () => {
     expect(ids({ sort: 'price' })).toEqual(['2', '3', '1', '4'])
   })

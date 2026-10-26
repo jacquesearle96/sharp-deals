@@ -8,6 +8,10 @@ interface Props {
   /** Number of deals per store before store filtering, shown on the chips */
   counts: Partial<Record<StoreId, number>>
   hideSearch?: boolean
+  /** Which store chips to show; defaults to the main deal stores */
+  stores?: StoreId[]
+  /** Show an "On special" toggle (for catalogues that list full-price items too) */
+  showOnSale?: boolean
 }
 
 const SORTS: { id: SortKey; label: string }[] = [
@@ -17,7 +21,7 @@ const SORTS: { id: SortKey; label: string }[] = [
   { id: 'ending', label: 'Ending soon' },
 ]
 
-export function FilterBar({ filters, onChange, counts, hideSearch }: Props) {
+export function FilterBar({ filters, onChange, counts, hideSearch, stores = DEAL_STORES, showOnSale }: Props) {
   const toggleStore = (id: StoreId) =>
     onChange({
       ...filters,
@@ -41,7 +45,7 @@ export function FilterBar({ filters, onChange, counts, hideSearch }: Props) {
       )}
 
       <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
-        {DEAL_STORES.map((id) => {
+        {stores.map((id) => {
           const on = filters.stores.includes(id)
           return (
             <button
@@ -62,6 +66,18 @@ export function FilterBar({ filters, onChange, counts, hideSearch }: Props) {
       </div>
 
       <div className="flex items-center justify-between gap-3">
+        {showOnSale ? (
+          <button
+            type="button"
+            onClick={() => onChange({ ...filters, onSaleOnly: !filters.onSaleOnly })}
+            aria-pressed={!!filters.onSaleOnly}
+            className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
+              filters.onSaleOnly ? 'border-transparent bg-gradient-to-r from-brand to-brand2 text-white' : 'border-line bg-surface'
+            }`}
+          >
+            On special only
+          </button>
+        ) : (
         <button
           type="button"
           onClick={() => onChange({ ...filters, multiBuyOnly: !filters.multiBuyOnly })}
@@ -74,6 +90,7 @@ export function FilterBar({ filters, onChange, counts, hideSearch }: Props) {
         >
           3 for 2 &amp; multi-buys
         </button>
+        )}
         <label className="flex items-center gap-2 text-sm text-muted">
           <span className="sr-only">Sort by</span>
           <select

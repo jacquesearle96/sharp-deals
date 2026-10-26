@@ -8,6 +8,8 @@ export interface Filters {
   text: string
   stores: StoreId[]
   multiBuyOnly: boolean
+  /** Keep only items that are actually discounted or on a multi-buy */
+  onSaleOnly?: boolean
   sort: SortKey
 }
 
@@ -36,6 +38,7 @@ export function queryDeals(products: DealProduct[], mini: MiniSearch, f: Filters
   }
   if (f.stores.length) rows = rows.filter((p) => f.stores.includes(p.store))
   if (f.multiBuyOnly) rows = rows.filter((p) => isMultiBuy(p.promo))
+  if (f.onSaleOnly) rows = rows.filter((p) => p.savePct > 0 || isMultiBuy(p.promo))
 
   const cmp: Record<SortKey, (a: DealProduct, b: DealProduct) => number> = {
     relevance: text

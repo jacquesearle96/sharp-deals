@@ -1,5 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { SHOP_STORES, type DealProduct, type StoreId } from '../../../shared/types.ts'
+import type { IndexState } from '../lib/data.ts'
+import { buildSearch, queryDeals, type Filters } from '../lib/query.ts'
 import { daysToBlackFriday, IDEAS, retailersFor, type ShopCategory } from '../lib/retailers.ts'
+import { DealList } from './DealList.tsx'
+import { FilterBar } from './FilterBar.tsx'
 
 const RECENT_KEY = 'sharp-deals:recent-shop-searches'
 
@@ -16,9 +21,18 @@ const CATEGORIES: { id: ShopCategory; label: string; icon: string }[] = [
   { id: 'baby', label: 'Baby', icon: '🍼' },
 ]
 
-export function ShopAround() {
-  const [category, setCategory] = useState<ShopCategory>('tech')
+interface Props {
+  shop: IndexState
+  has: (deal: DealProduct) => boolean
+  onToggle: (deal: DealProduct) => void
+}
+
+export function ShopAround({ shop, has, onToggle }: Props) {
+  const [category, setCategory] = useState<ShopCategory>('baby')
   const [text, setText] = useState('')
+  const [stores, setStores] = useState<StoreId[]>([])
+  const [onSaleOnly, setOnSaleOnly] = useState(false)
+  const [sort, setSort] = useState<Filters['sort']>('relevance')
   const [recent, setRecent] = useState<string[]>(loadRecent)
   const query = text.trim()
   const days = daysToBlackFriday()
@@ -35,6 +49,23 @@ export function ShopAround() {
     if (query) setRecent((cur) => [query, ...cur.filter((r) => r.toLowerCase() !== query.toLowerCase())].slice(0, 8))
   }
 
+  // Scraped catalogue for the chosen section only.
+  const products = useMemo(
+    () => (shop.status === 'ready' ? shop.index.products.filter((p) => p.category === category) : []),
+    [shop, category],
+  )
+  const mini = useMemo(() => buildSearch(products), [products])
+  const counts = useMemo(() => {
+    const c: Partial<Record<StoreId, number>> = {}
+    for (const p of products) c[p.store] = (c[p.store] ?? 0) + 1
+    return c
+  }, [products])
+  const shopsWithData = SHOP_STORES.filter((s) => (counts[s] ?? 0) > 0)
+  const results = useMemo(
+    () => queryDeals(products, mini, { text, stores, multiBuyOnly: false, onSaleOnly, sort }),
+    [products, mini, text, stores, onSaleOnly, sort],
+  )
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl bg-gradient-to-r from-brand to-brand2 p-4 text-white">
@@ -50,7 +81,10 @@ export function ShopAround() {
           <button
             key={c.id}
             type="button"
-            onClick={() => setCategory(c.id)}
+            onClick={() => {
+              setCategory(c.id)
+              setStores([])
+            }}
             aria-pressed={category === c.id}
             className={`rounded-xl py-2 text-sm font-semibold transition ${
               category === c.id ? 'bg-ink text-bg' : 'text-muted'
@@ -114,6 +148,43 @@ export function ShopAround() {
             )
           })}
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-muted">Prices we track</h2>
+        {shop.status === 'loading' && <p className="text-sm text-muted">Loading…</p>}
+        {shop.status === 'error' && (
+          <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted">
+            No tracked prices yet. Black Friday prices will appear here as the shops publish them.
+          </p>
+        )}
+        {shop.status === 'ready' && products.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted">
+            We don’t track any {category} shops yet. Use the buttons above to search them directly.
+          </p>
+        )}
+        {shop.status === 'ready' && products.length > 0 && (
+          <>
+            <FilterBar
+              filters={{ text, stores, multiBuyOnly: false, onSaleOnly, sort }}
+              onChange={(f) => {
+                setStores(f.stores)
+                setOnSaleOnly(!!f.onSaleOnly)
+                setSort(f.sort)
+              }}
+              counts={counts}
+              stores={shopsWithData}
+              hideSearch
+              showOnSale
+            />
+            <DealList
+              deals={results}
+              has={has}
+              onToggle={onToggle}
+              empty={query ? `No tracked prices match “${query}”. Try the shop buttons above.` : 'Nothing matches these filters.'}
+            />
+          </>
+        )}
       </section>
     </div>
   )

@@ -5,7 +5,7 @@ import { DealCard } from './components/DealCard.tsx'
 import { DealList } from './components/DealList.tsx'
 import { FilterBar } from './components/FilterBar.tsx'
 import { ShopAround } from './components/ShopAround.tsx'
-import { useDeals } from './lib/data.ts'
+import { useDeals, useShopIndex } from './lib/data.ts'
 import { ago, money } from './lib/format.ts'
 import { useShoppingList } from './lib/list.ts'
 import { queryDeals, type Filters } from './lib/query.ts'
@@ -18,6 +18,8 @@ export default function App() {
   const { state, mini } = useDeals()
   const list = useShoppingList()
   const [tab, setTab] = useState<Tab>('search')
+  // The big Baby and Tech catalogue only loads once someone opens that tab.
+  const shop = useShopIndex(tab === 'shop')
   const [search, setSearch] = useState<Filters>(SEARCH_DEFAULTS)
   const [top, setTop] = useState<Filters>(TOP_DEFAULTS)
 
@@ -72,7 +74,7 @@ export default function App() {
           </>
         )}
 
-        {tab === 'shop' && <ShopAround />}
+        {tab === 'shop' && <ShopAround shop={shop.state} has={list.has} onToggle={list.toggle} />}
 
         {state.status === 'ready' && tab === 'list' && <ListScreen list={list} />}
 
