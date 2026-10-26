@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write # push the data branch
+  actions: write # let a tag run start the main run that deploys
   pages: write
   id-token: write
 
@@ -88,7 +89,19 @@ jobs:
           git commit -q -m "Data $(date -u +'%Y-%m-%d %H:%M') UTC"
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data
 
+      # GitHub Pages only accepts deployments from main, so a run started by a tag stops after saving the
+      # data and starts a main run (which just rebuilds from the saved data and deploys).
+      - name: Hand over to a main run to build and deploy
+        if: github.ref_type == 'tag'
+        run: |
+          curl -sS -f -X POST \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/scrape-and-deploy.yml/dispatches" \
+            -d '{"ref":"main","inputs":{"stores":"index"}}'
+
       - name: Build the app
+        if: github.ref_type != 'tag'
         run: |
           npm ci
           npm run build
@@ -100,11 +113,13 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
       - name: Drop the raw per-store files from the site
+        if: github.ref_type != 'tag'
         # The app only reads index.json, shop-index.json, runs.json and history/.
-        run: rm -f pnp.json checkers.json woolworths.json spar.json clicks.json dischem.json babycity.json babiesrus.json
+        run: find . -maxdepth 1 -name '*.json' ! -name index.json ! -name shop-index.json ! -name runs.json -print -delete
         working-directory: app/dist/data
 
       - uses: actions/upload-pages-artifact@v3
+        if: github.ref_type != 'tag'
         with:
           path: app/dist
 
@@ -114,6 +129,7 @@ jobs:
 
   deploy:
     needs: scrape-build
+    if: github.ref_type != 'tag'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
