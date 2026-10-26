@@ -5,6 +5,9 @@ name: Scrape and deploy
 on:
   schedule:
     - cron: '0 */6 * * *' # every 6 hours (UTC)
+  # Pushing a tag named scrape-<stores> also starts a run, e.g. scrape-pnp-spar, scrape-grocery or scrape-all.
+  push:
+    tags: ['scrape-*']
   workflow_dispatch:
     inputs:
       stores:
@@ -58,10 +61,21 @@ jobs:
         id: scrape
         # A store that fails keeps its previous data, so one blocked site never stops the rest.
         continue-on-error: true
-        run: node src/run.ts $STORES
+        run: |
+          if [ -n "$TAG" ]; then
+            STORES="${TAG#scrape-}"
+            STORES="${STORES//-/ }"
+            [ "$STORES" = "all" ] && STORES=""
+          else
+            STORES="$STORES_INPUT"
+          fi
+          STORES=$(echo "$STORES" | tr -cd 'a-z ')
+          echo "Scraping: ${STORES:-everything}"
+          node src/run.ts $STORES
         working-directory: scraper
         env:
-          STORES: ${{ github.event.inputs.stores }}
+          STORES_INPUT: ${{ github.event.inputs.stores }}
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
 
       - name: Save the data branch
         run: |

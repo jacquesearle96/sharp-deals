@@ -34,6 +34,16 @@ Price history builds up run by run. Verdict tags such as "Lowest in 20 days" app
 5. **First run.** Repository **Actions > Scrape and deploy > Run workflow**. It takes about 1 to 1.5 hours.
    When it finishes, the app is at `https://<your-github-username>.github.io/sharp-deals/`.
 
+### Starting a run by pushing a tag
+
+Besides the Actions page, pushing a git tag named `scrape-<stores>` starts a run, with the store names joined by dashes:
+
+```
+git tag scrape-foodlovers-checkers && git push origin scrape-foodlovers-checkers
+git tag scrape-all && git push origin scrape-all        # everything
+git push origin :refs/tags/scrape-all                   # delete the tag afterwards so the name can be reused
+```
+
 ## Installing on an iPhone
 
 Open the Pages address in **Safari**, tap **Share**, then **Add to Home Screen**.
