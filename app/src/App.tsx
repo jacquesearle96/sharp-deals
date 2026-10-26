@@ -4,6 +4,7 @@ import { BottomNav, type Tab } from './components/BottomNav.tsx'
 import { DealCard } from './components/DealCard.tsx'
 import { DealList } from './components/DealList.tsx'
 import { FilterBar } from './components/FilterBar.tsx'
+import { ShopAround } from './components/ShopAround.tsx'
 import { useDeals } from './lib/data.ts'
 import { ago, money } from './lib/format.ts'
 import { useShoppingList } from './lib/list.ts'
@@ -71,9 +72,11 @@ export default function App() {
           </>
         )}
 
+        {tab === 'shop' && <ShopAround />}
+
         {state.status === 'ready' && tab === 'list' && <ListScreen list={list} />}
 
-        {state.status === 'ready' && <StoreStatus runs={state.index.runs} />}
+        {state.status === 'ready' && tab !== 'shop' && <StoreStatus runs={state.index.runs} />}
       </main>
 
       <BottomNav tab={tab} onChange={setTab} listCount={list.items.length} />

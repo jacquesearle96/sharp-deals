@@ -1,8 +1,9 @@
-export type Tab = 'search' | 'deals' | 'list'
+export type Tab = 'search' | 'deals' | 'shop' | 'list'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'search', label: 'Search', icon: '🔍' },
+  { id: 'search', label: 'Groceries', icon: '🔍' },
   { id: 'deals', label: 'Top deals', icon: '🔥' },
+  { id: 'shop', label: 'Shop around', icon: '🛍️' },
   { id: 'list', label: 'My list', icon: '🧺' },
 ]
 
