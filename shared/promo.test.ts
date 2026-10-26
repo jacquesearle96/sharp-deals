@@ -32,6 +32,15 @@ describe('parsePromo', () => {
     expect(isMultiBuy(a)).toBe(false);
     expect(parsePromo('R29.99')).toMatchObject({ kind: 'price', qty: 1, total: 29.99 });
   });
+  it('parses "2for 50" without a rand sign', () => {
+    expect(parsePromo('save per offer 2for 50')).toMatchObject({ kind: 'price', qty: 2, total: 50 });
+  });
+  it('parses a single-item "Save 30%" as a percentage', () => {
+    const p = parsePromo('Save 30% on all CLICKS HOSIERY');
+    expect(p).toMatchObject({ kind: 'percent', qty: 1, percent: 30 });
+    expect(isMultiBuy(p)).toBe(false);
+    expect(effectivePrice(100, p)).toBeCloseTo(70);
+  });
   it('parses "3 For R265.00" with trailing space', () => {
     expect(parsePromo('3 For R265.00 ')).toMatchObject({ kind: 'price', qty: 3, total: 265 });
   });

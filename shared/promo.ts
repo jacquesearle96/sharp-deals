@@ -23,8 +23,8 @@ export function parsePromo(text: string | undefined | null): Promo {
   m = t.match(/\bbuy (\d+),? get (\d+) free\b/);
   if (m) return { kind: 'free', raw, qty: +m[1] + +m[2], payFor: +m[1] };
 
-  // "2 for R50" / "buy 2 for R50"
-  m = t.match(new RegExp(String.raw`\b(\d+) for ${RAND}\b`));
+  // "2 for R50" / "buy 2 for R50" / "2for 50"
+  m = t.match(new RegExp(String.raw`\b(\d+)\s?for\s?${RAND.replace('r\\s?', 'r?\\s?')}`));
   if (m) return { kind: 'price', raw, qty: +m[1], total: toNumber(m[2]) };
 
   // "buy 2 save 20%" / "buy 2 get 20% off"
@@ -34,6 +34,10 @@ export function parsePromo(text: string | undefined | null): Promo {
   // "buy 2 save R10" / "buy 3 or more, save R30"
   m = t.match(new RegExp(String.raw`\bbuy (\d+)(?: or more)?,? (?:and )?save ${RAND}\b`));
   if (m) return { kind: 'save', raw, qty: +m[1], save: toNumber(m[2]) };
+
+  // single-item percentage: "Save 30%" / "30% off"
+  m = t.match(/\bsave (\d+(?:\.\d+)?)%|(\d+(?:\.\d+)?)% off\b/);
+  if (m) return { kind: 'percent', raw, qty: 1, percent: +(m[1] ?? m[2]) };
 
   // bare promo price: "R29.99"
   m = t.match(new RegExp(String.raw`^${RAND}$`));
