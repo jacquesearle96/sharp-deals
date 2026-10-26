@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { SHOP_STORES, STORES, type Product, type StoreId, type StoreRun } from '../../shared/types.ts';
 import type { StoreAdapter } from './adapter.ts';
+import { takeNotes } from './diagnostics.ts';
 import { readHistory, updateHistory, writeHistory } from './history.ts';
 import { buildIndex, buildShopIndex, mergeRuns, today } from './index-data.ts';
 import { babiesrus } from './stores/babiesrus.ts';
@@ -37,17 +38,18 @@ const all: Product[] = [];
 
 for (const adapter of selected) {
   const at = new Date().toISOString();
+  takeNotes(); // start this store with a clean list
   try {
     const products = await adapter.run();
     if (products.length === 0) throw new Error('adapter returned no products');
     await writeFile(join(OUT_DIR, `${adapter.store}.json`), JSON.stringify(products));
     await recordHistory(adapter.store, products);
     all.push(...products);
-    runs.push({ store: adapter.store, ok: true, count: products.length, at });
+    runs.push({ store: adapter.store, ok: true, count: products.length, at, notes: takeNotes() });
     console.log(`${adapter.store}: ${products.length} products`);
   } catch (err) {
     // Keep the previous data file; just record the failure.
-    runs.push({ store: adapter.store, ok: false, count: 0, error: String(err), at });
+    runs.push({ store: adapter.store, ok: false, count: 0, error: String(err), at, notes: takeNotes() });
     console.error(`${adapter.store} FAILED:`, err);
   }
 }

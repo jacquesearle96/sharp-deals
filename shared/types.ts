@@ -49,6 +49,8 @@ export interface StoreRun {
   ok: boolean;
   count: number;
   error?: string;
+  /** Things worth knowing about this run, e.g. a page that came back as a bot check */
+  notes?: string[];
   /** ISO timestamp */
   at: string;
 }

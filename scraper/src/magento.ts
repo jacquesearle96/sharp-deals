@@ -1,6 +1,7 @@
 import type { Page } from 'playwright';
 import { effectivePrice, parsePromo } from '../../shared/promo.ts';
 import type { Category, Product, StoreId } from '../../shared/types.ts';
+import { describePage, note } from './diagnostics.ts';
 import { sleep } from './http.ts';
 
 /** One product tile from a Magento listing page. */
@@ -68,7 +69,10 @@ export async function crawlMagentoListing(
   for (let p = 1; p <= opts.maxPages; p++) {
     await page.goto(`${url}${url.includes('?') ? '&' : '?'}p=${p}`, { waitUntil: 'domcontentloaded' });
     const found = await page.waitForSelector('li.product-item', { timeout: 20_000 }).then(() => true, () => false);
-    if (!found) break;
+    if (!found) {
+      if (p === 1) note(`no products on ${url}: ${await describePage(page)}`);
+      break;
+    }
     const fresh = (await readMagentoTiles(page)).filter((t) => t.href && !seen.has(t.href));
     if (fresh.length === 0) break;
     for (const t of fresh) seen.add(t.href);

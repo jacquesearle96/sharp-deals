@@ -2,6 +2,7 @@ import { chromium, type Page } from 'playwright';
 import { effectivePrice, parsePromo } from '../../../shared/promo.ts';
 import type { Category, Product } from '../../../shared/types.ts';
 import type { StoreAdapter } from '../adapter.ts';
+import { describePage, note } from '../diagnostics.ts';
 import { sleep } from '../http.ts';
 
 const ORIGIN = 'https://clicks.co.za';
@@ -120,7 +121,10 @@ export const clicks: StoreAdapter = {
         for (let pageNo = 0; pageNo < MAX_PAGES_PER_LISTING; pageNo++) {
           await page.goto(`${ORIGIN}${path}&text=&count=${PAGE_COUNT}&page=${pageNo}`, { waitUntil: 'domcontentloaded' });
           const found = await page.waitForSelector('a[href*="/p/"]', { timeout: 20_000 }).then(() => true, () => false);
-          if (!found) break;
+          if (!found) {
+            if (pageNo === 0) note(`no products on ${path.slice(0, 40)}: ${await describePage(page)}`);
+            break;
+          }
           const tiles = await readTiles(page);
           let added = 0;
           for (const tile of tiles) {

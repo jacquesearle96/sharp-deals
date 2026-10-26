@@ -59,7 +59,7 @@ export async function mergeRuns(dir: string, current: StoreRun[]): Promise<Store
   for (const r of current) {
     const before = byStore.get(r.store);
     // A failed run keeps the last good timestamp visible alongside the error.
-    byStore.set(r.store, r.ok || !before ? r : { ...before, error: r.error });
+    byStore.set(r.store, r.ok || !before ? r : { ...before, error: r.error, notes: r.notes });
   }
   return [...STORES, ...SHOP_STORES].flatMap((s) => (byStore.has(s) ? [byStore.get(s)!] : []));
 }
