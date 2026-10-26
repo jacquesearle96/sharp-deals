@@ -11,6 +11,7 @@ export const STORE_INFO: Record<StoreId, StoreInfo> = {
   pnp: { id: 'pnp', name: 'Pick n Pay', color: '#1e6bd6' },
   checkers: { id: 'checkers', name: 'Checkers', color: '#e1251b' },
   woolworths: { id: 'woolworths', name: 'Woolworths', color: '#1f2937' },
+  foodlovers: { id: 'foodlovers', name: "Food Lover's", color: '#5b9e2d' },
   spar: { id: 'spar', name: 'Spar', color: '#0a9b4b' },
   clicks: { id: 'clicks', name: 'Clicks', color: '#0099cc' },
   dischem: { id: 'dischem', name: 'Dis-Chem', color: '#00a19b' },

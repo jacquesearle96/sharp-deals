@@ -77,20 +77,22 @@ export const spar: StoreAdapter = {
       const ends = parseValidUntil(await page.locator('body').innerText(), now);
       const cards: CardText[] = await page.evaluate(() => {
         const isPrice = (s: string) => /^R\s?\d[\d\s]*\.\d{2}$/.test(s);
+        // The card also holds a small Rewards badge; the product photo is the wide image.
+        const photo = (el: Element) => [...el.querySelectorAll('img')].find((i) => i.getBoundingClientRect().width > 100);
         const out = new Map<HTMLElement, string[]>();
         const leaves = [...document.querySelectorAll<HTMLElement>('body *')].filter((e) => e.children.length === 0 && isPrice((e.innerText || '').trim()));
         for (const leaf of leaves) {
           let c: HTMLElement | null = leaf;
           for (let i = 0; i < 8 && c; i++) {
             const lines = (c.innerText || '').split('\n').map((l) => l.trim()).filter(Boolean);
-            if (lines.length >= 3 && lines.filter(isPrice).length === 1 && c.querySelector('img')) {
+            if (lines.length >= 3 && lines.filter(isPrice).length === 1 && photo(c)) {
               out.set(c, lines);
               break;
             }
             c = c.parentElement;
           }
         }
-        return [...out.entries()].map(([el, lines]) => ({ lines, image: el.querySelector('img')?.getAttribute('src') ?? undefined }));
+        return [...out.entries()].map(([el, lines]) => ({ lines, image: photo(el)?.src }));
       });
       const byId = new Map<string, Product>();
       for (const card of cards) {

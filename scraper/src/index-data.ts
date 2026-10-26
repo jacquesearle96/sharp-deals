@@ -7,8 +7,21 @@ export const today = () => new Date().toISOString().slice(0, 10);
 
 const isDeal = (p: Product) => p.promo.kind !== 'none' || (p.wasPrice !== undefined && p.wasPrice > p.price);
 
+/** Where a store's site-relative image paths ("/medias/x.jpg") point. Anything else relative is dropped. */
+const IMAGE_ORIGINS: Partial<Record<Product['store'], string>> = {
+  clicks: 'https://clicks.co.za',
+  spar: 'https://www.spar.co.za',
+};
+
+export function fixImage(store: Product['store'], image: string | undefined): string | undefined {
+  if (!image || /^https?:\/\//.test(image)) return image;
+  const origin = IMAGE_ORIGINS[store];
+  return origin && image.startsWith('/') ? origin + image : undefined;
+}
+
 export function toDeal(p: Product, hist?: PriceStats): DealProduct {
   const { scrapedAt: _scrapedAt, ...rest } = p;
+  rest.image = fixImage(p.store, p.image);
   const reference = p.wasPrice ?? p.price;
   const savePct = Math.max(0, Math.round((1 - p.effectivePrice / reference) * 100));
   return hist && hist.days >= 1 ? { ...rest, savePct, hist } : { ...rest, savePct };

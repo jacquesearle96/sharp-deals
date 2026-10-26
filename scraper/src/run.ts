@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { SHOP_STORES, STORES, type Product, type StoreId, type StoreRun } from '../../shared/types.ts';
 import type { StoreAdapter } from './adapter.ts';
-import { takeNotes } from './diagnostics.ts';
+import { dropRelativeImages, note, takeNotes } from './diagnostics.ts';
 import { readHistory, updateHistory, writeHistory } from './history.ts';
 import { buildIndex, buildShopIndex, mergeRuns, today } from './index-data.ts';
 import { babiesrus } from './stores/babiesrus.ts';
@@ -10,11 +10,12 @@ import { babycity } from './stores/babycity.ts';
 import { checkers } from './stores/checkers.ts';
 import { clicks } from './stores/clicks.ts';
 import { dischem } from './stores/dischem.ts';
+import { foodlovers } from './stores/foodlovers.ts';
 import { pnp } from './stores/pnp.ts';
 import { spar } from './stores/spar.ts';
 import { woolworths } from './stores/woolworths.ts';
 
-const ADAPTERS: StoreAdapter[] = [pnp, checkers, woolworths, clicks, dischem, spar, babycity, babiesrus];
+const ADAPTERS: StoreAdapter[] = [pnp, checkers, woolworths, foodlovers, clicks, dischem, spar, babycity, babiesrus];
 
 /** "grocery" and "shop" select a whole section; otherwise name stores, e.g. "pnp spar". */
 const GROUPS: Record<string, StoreId[]> = {
@@ -40,8 +41,10 @@ for (const adapter of selected) {
   const at = new Date().toISOString();
   takeNotes(); // start this store with a clean list
   try {
-    const products = await adapter.run();
-    if (products.length === 0) throw new Error('adapter returned no products');
+    const scraped = await adapter.run();
+    if (scraped.length === 0) throw new Error('adapter returned no products');
+    const { products, dropped } = dropRelativeImages(scraped);
+    if (dropped) note(`${dropped} images had a relative address and were dropped`);
     await writeFile(join(OUT_DIR, `${adapter.store}.json`), JSON.stringify(products));
     await recordHistory(adapter.store, products);
     all.push(...products);

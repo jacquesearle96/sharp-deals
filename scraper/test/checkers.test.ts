@@ -26,7 +26,7 @@ describe('checkers mapCard', () => {
     expect(p.name).toBe('Housebrand 2-Ply Toilet Rolls');
     expect(p.price).toBe(200);
     expect(p.wasPrice).toBe(260);
-    expect(p.promo.kind).toBe('none');
+    expect(p.promo.kind).toBe('discount');
     expect(p.effectivePrice).toBe(200);
     expect(p.promoEnds).toBe('2026-11-08');
     expect(p.url).toBe('https://www.cataloguespecials.co.za/view/specials/checkers-catalogue-3859020?offer=69265125#page=1');
@@ -40,7 +40,7 @@ describe('checkers mapCard', () => {
 
   it('does not double-apply a percentage SAVE badge', () => {
     const p = mapCard(card('SAVE 20% | Some Product 500g | 5 days | R 100,00 | R 80,00', '/v?offer=8'), NOW)!;
-    expect(p.promo.kind).toBe('none');
+    expect(p.promo.kind).toBe('discount');
     expect(p.effectivePrice).toBe(80);
   });
 

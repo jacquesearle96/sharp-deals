@@ -101,7 +101,8 @@ async function readTiles(page: Page): Promise<Tile[]> {
         href,
         lines: c.innerText.split('\n'),
         stickers: [...c.querySelectorAll('img[alt="Clicks Promo"]')].map((i) => (i.getAttribute('src') ?? '').split('?')[0].split('/').pop() ?? ''),
-        image: c.querySelector('img[alt]:not([alt="Clicks Promo"])')?.getAttribute('src') ?? undefined,
+        // .src is the full address; the attribute is site-relative (/medias/?context=...)
+        image: (c.querySelector('img[alt]:not([alt="Clicks Promo"])') as HTMLImageElement | null)?.src || undefined,
       });
     }
     return out;

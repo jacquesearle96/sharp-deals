@@ -21,3 +21,19 @@ export async function describePage(page: Page): Promise<string> {
   const body = (await page.locator('body').innerText({ timeout: 3000 }).catch(() => '')).replace(/\s+/g, ' ').slice(0, 120);
   return `title "${title}" at ${page.url().slice(0, 90)}; text: ${body}`;
 }
+
+/**
+ * Images must be full web addresses: a site-relative one such as "/medias/x.jpg" would resolve against
+ * our own hosted site and show as broken. Relative ones are dropped (the app shows a placeholder).
+ */
+export function dropRelativeImages<T extends { image?: string }>(products: T[]): { products: T[]; dropped: number } {
+  let dropped = 0;
+  const out = products.map((p) => {
+    if (p.image && !/^https?:\/\//.test(p.image)) {
+      dropped++;
+      return { ...p, image: undefined };
+    }
+    return p;
+  });
+  return { products: out, dropped };
+}

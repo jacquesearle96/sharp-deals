@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { parsePromo } from '../../shared/promo.ts';
 import type { Product, StoreRun } from '../../shared/types.ts';
-import { buildIndex, buildShopIndex, mergeRuns, toDeal } from '../src/index-data.ts';
+import { buildIndex, buildShopIndex, fixImage, mergeRuns, toDeal } from '../src/index-data.ts';
 
 const product = (over: Partial<Product> & Pick<Product, 'store' | 'id' | 'name'>): Product => ({
   price: 100,
@@ -38,6 +38,22 @@ describe('toDeal', () => {
   });
   it('drops the scrape timestamp', () => {
     expect('scrapedAt' in toDeal(product({ store: 'pnp', id: 'x', name: 'x' }))).toBe(false);
+  });
+});
+
+describe('fixImage', () => {
+  it('leaves full addresses alone', () => {
+    expect(fixImage('pnp', 'https://cdn.pnp.co.za/a.jpg')).toBe('https://cdn.pnp.co.za/a.jpg');
+    expect(fixImage('pnp', undefined)).toBeUndefined();
+  });
+  it('completes a Clicks path with the Clicks site', () => {
+    expect(fixImage('clicks', '/medias/?context=abc')).toBe('https://clicks.co.za/medias/?context=abc');
+  });
+  it('drops relative paths for stores we cannot place', () => {
+    expect(fixImage('babycity', '/x.jpg')).toBeUndefined();
+  });
+  it('is applied when a product becomes a deal', () => {
+    expect(toDeal(product({ store: 'clicks', id: 'z', name: 'z', image: '/medias/?context=q' })).image).toBe('https://clicks.co.za/medias/?context=q');
   });
 });
 

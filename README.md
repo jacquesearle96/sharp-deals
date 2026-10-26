@@ -1,7 +1,7 @@
 # Sharp Deals
 
-One place to search specials from Checkers, Pick n Pay, Woolworths, Spar, Clicks, Dis-Chem, Baby City and
-Babies R Us, plus a Baby and Tech section for Black Friday. Built as an installable web app (PWA).
+One place to search specials from Checkers, Pick n Pay, Woolworths, Food Lover's Market, Spar, Clicks, Dis-Chem,
+Baby City and Babies R Us, plus a Baby and Tech section for Black Friday. Built as an installable web app (PWA).
 
 - `app/` the web app (React, Vite, Tailwind)
 - `scraper/` the scrapers, one adapter per store (Node and Playwright)
@@ -48,7 +48,7 @@ Some sites block cloud servers; if that happens to one store you can run its scr
 ## Notes
 
 - GitHub pauses scheduled workflows after 60 days with no repository activity. Any commit, or pressing **Run workflow**, restarts them.
-- Checkers specials come from the leaflet site cataloguespecials.co.za, whose terms reserve rights to its data.
+- Checkers and Food Lover's Market specials come from the leaflet site cataloguespecials.co.za, whose terms reserve rights to its data.
 - Scrapers only read public pages, wait between requests, and skip any area a site's robots.txt asks crawlers to avoid.
 
 ## Working on it locally
