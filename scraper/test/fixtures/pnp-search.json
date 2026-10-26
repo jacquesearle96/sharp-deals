@@ -1,0 +1,83 @@
+{
+ "type": "productCategorySearchPageWsDTO",
+ "pagination": {
+  "currentPage": 0,
+  "pageSize": 72,
+  "sort": "relevance",
+  "totalPages": 41,
+  "totalResults": 2925
+ },
+ "products": [
+  {
+   "code": "000000000000626240_EA",
+   "name": "Cadbury Dairy Milk Top Deck Chocolate Slab 80g",
+   "potentialPromotions": [
+    {
+     "code": "SCRIPT20261024021916-3000746034",
+     "endDate": "2026-11-08T21:59:59+0000",
+     "promotionDisplayType": "SMART_SHOPPER",
+     "promotionTextMessage": "2 For R38.00 ",
+     "startDate": "2026-10-22T22:00:00+0000",
+     "valid": false
+    }
+   ],
+   "price": {
+    "average": false,
+    "currencyIso": "ZAR",
+    "formattedValue": "R24.99",
+    "oldPrice": 0,
+    "oldPriceFormattedValue": "R0.00",
+    "onlineOnlyPrice": false,
+    "priceDisplayType": "SELLING",
+    "priceType": "BUY",
+    "savings": 0,
+    "savingsFormattedValue": "R0.00",
+    "value": 24.99
+   }
+  },
+  {
+   "code": "000000000000626242_EA",
+   "name": "Cadbury Dairy Milk Whole Nut Chocolate Slab 80g",
+   "potentialPromotions": [
+    {
+     "code": "SCRIPT20261024021916-3000746034",
+     "endDate": "2026-11-08T21:59:59+0000",
+     "promotionDisplayType": "SMART_SHOPPER",
+     "promotionTextMessage": "2 For R38.00 ",
+     "startDate": "2026-10-22T22:00:00+0000",
+     "valid": false
+    }
+   ],
+   "price": {
+    "average": false,
+    "currencyIso": "ZAR",
+    "formattedValue": "R24.99",
+    "oldPrice": 0,
+    "oldPriceFormattedValue": "R0.00",
+    "onlineOnlyPrice": false,
+    "priceDisplayType": "SELLING",
+    "priceType": "BUY",
+    "savings": 0,
+    "savingsFormattedValue": "R0.00",
+    "value": 24.99
+   }
+  },
+  {
+   "code": "000000000001006430_EA",
+   "name": "Nestle KitKat Salted Caramel Chocolate 99g",
+   "price": {
+    "average": false,
+    "currencyIso": "ZAR",
+    "formattedValue": "R18.99",
+    "oldPrice": 44.99,
+    "oldPriceFormattedValue": "R44.99",
+    "onlineOnlyPrice": false,
+    "priceDisplayType": "PROMOTION",
+    "priceType": "BUY",
+    "savings": 26,
+    "savingsFormattedValue": "R26.00",
+    "value": 18.99
+   }
+  }
+ ]
+}
