@@ -1,122 +1,141 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useMemo, useState } from 'react'
+import type { DealProduct, StoreId } from '../../shared/types.ts'
+import { BottomNav, type Tab } from './components/BottomNav.tsx'
+import { DealCard } from './components/DealCard.tsx'
+import { DealList } from './components/DealList.tsx'
+import { FilterBar } from './components/FilterBar.tsx'
+import { useDeals } from './lib/data.ts'
+import { ago, money } from './lib/format.ts'
+import { useShoppingList } from './lib/list.ts'
+import { queryDeals, type Filters } from './lib/query.ts'
+import { STORE_INFO } from './lib/stores.ts'
 
-function App() {
-  const [count, setCount] = useState(0)
+const SEARCH_DEFAULTS: Filters = { text: '', stores: [], multiBuyOnly: false, sort: 'relevance' }
+const TOP_DEFAULTS: Filters = { text: '', stores: [], multiBuyOnly: true, sort: 'saving' }
+
+export default function App() {
+  const { state, mini } = useDeals()
+  const list = useShoppingList()
+  const [tab, setTab] = useState<Tab>('search')
+  const [search, setSearch] = useState<Filters>(SEARCH_DEFAULTS)
+  const [top, setTop] = useState<Filters>(TOP_DEFAULTS)
+
+  const products = state.status === 'ready' ? state.index.products : []
+  const counts = useMemo(() => {
+    const c: Partial<Record<StoreId, number>> = {}
+    for (const p of products) c[p.store] = (c[p.store] ?? 0) + 1
+    return c
+  }, [products])
+
+  const searchResults = useMemo(() => (mini ? queryDeals(products, mini, search) : []), [products, mini, search])
+  const topResults = useMemo(() => (mini ? queryDeals(products, mini, top) : []), [products, mini, top])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="mx-auto min-h-screen max-w-2xl pb-28">
+      <header className="safe-top sticky top-0 z-10 bg-bg/90 px-4 pb-3 pt-4 backdrop-blur">
+        <div className="flex items-end justify-between">
+          <h1 className="text-2xl font-black tracking-tight">
+            Sharp <span className="bg-gradient-to-r from-brand to-brand2 bg-clip-text text-transparent">Deals</span>
+          </h1>
+          {state.status === 'ready' && (
+            <p className="text-xs text-muted">Updated {ago(state.index.generatedAt)}</p>
+          )}
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+      </header>
+
+      <main className="space-y-4 px-4">
+        {state.status === 'loading' && <p className="py-16 text-center text-muted">Loading deals…</p>}
+        {state.status === 'error' && (
+          <p className="rounded-2xl border border-line bg-surface p-6 text-center">
+            Couldn’t load deals. {state.message}
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+        )}
 
-      <div className="ticks"></div>
+        {state.status === 'ready' && tab === 'search' && (
+          <>
+            <FilterBar filters={search} onChange={setSearch} counts={counts} />
+            <DealList
+              deals={searchResults}
+              has={list.has}
+              onToggle={list.toggle}
+              empty={search.text ? `No deals found for “${search.text}”.` : 'No deals match these filters.'}
+            />
+          </>
+        )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        {state.status === 'ready' && tab === 'deals' && (
+          <>
+            <p className="text-sm text-muted">The best multi-buy deals right now, biggest saving first.</p>
+            <FilterBar filters={top} onChange={setTop} counts={counts} hideSearch />
+            <DealList deals={topResults} has={list.has} onToggle={list.toggle} empty="No multi-buy deals match these filters." />
+          </>
+        )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        {state.status === 'ready' && tab === 'list' && <ListScreen list={list} />}
+
+        {state.status === 'ready' && <StoreStatus runs={state.index.runs} />}
+      </main>
+
+      <BottomNav tab={tab} onChange={setTab} listCount={list.items.length} />
+    </div>
   )
 }
 
-export default App
+function ListScreen({ list }: { list: ReturnType<typeof useShoppingList> }) {
+  const total = list.items.reduce((sum, d) => sum + d.effectivePrice, 0)
+  const byStore = new Map<StoreId, DealProduct[]>()
+  for (const d of list.items) byStore.set(d.store, [...(byStore.get(d.store) ?? []), d])
+
+  if (list.items.length === 0) {
+    return (
+      <p className="rounded-2xl border border-dashed border-line p-8 text-center text-muted">
+        Your list is empty. Tap <b>+</b> on any deal to add it.
+      </p>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-brand to-brand2 p-4 text-white">
+        <div>
+          <p className="text-sm opacity-90">{list.items.length} items</p>
+          <p className="text-2xl font-extrabold">{money(total)}</p>
+        </div>
+        <button type="button" onClick={list.clear} className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">
+          Clear
+        </button>
+      </div>
+      {[...byStore.entries()].map(([store, items]) => (
+        <section key={store} className="space-y-3">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-muted">{STORE_INFO[store].name}</h2>
+          {items.map((d) => (
+            <DealCard key={`${d.store}:${d.id}`} deal={d} inList onToggle={list.toggle} />
+          ))}
+        </section>
+      ))}
+    </div>
+  )
+}
+
+/** Shows which stores refreshed, so a failed scrape is visible rather than silent. */
+function StoreStatus({ runs }: { runs: { store: StoreId; ok: boolean; at: string; count: number; error?: string }[] }) {
+  return (
+    <details className="rounded-2xl border border-line bg-surface p-4 text-sm">
+      <summary className="cursor-pointer font-semibold">Data status</summary>
+      <ul className="mt-3 space-y-1.5">
+        {runs.map((r) => (
+          <li key={r.store} className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <span className={`h-2 w-2 rounded-full ${r.ok && !r.error ? 'bg-ok' : 'bg-brand'}`} />
+              {STORE_INFO[r.store].name}
+            </span>
+            <span className="text-muted">
+              {r.ok ? `${r.count.toLocaleString('en-ZA')} items · ${ago(r.at)}` : 'last run failed'}
+              {r.ok && r.error ? ' · latest run failed' : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
+}

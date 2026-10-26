@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Product, StoreId, StoreRun } from '../../shared/types.ts';
 import type { StoreAdapter } from './adapter.ts';
+import { buildIndex, mergeRuns } from './index-data.ts';
 import { checkers } from './stores/checkers.ts';
 import { clicks } from './stores/clicks.ts';
 import { dischem } from './stores/dischem.ts';
@@ -35,5 +36,8 @@ for (const adapter of selected) {
   }
 }
 
-await writeFile(join(OUT_DIR, 'runs.json'), JSON.stringify(runs, null, 1));
+const merged = await mergeRuns(OUT_DIR, runs);
+await writeFile(join(OUT_DIR, 'runs.json'), JSON.stringify(merged, null, 1));
+const index = await buildIndex(OUT_DIR, merged);
+console.log(`index: ${index.products.length} deals from ${merged.filter((r) => r.ok).length} stores`);
 if (runs.some((r) => !r.ok)) process.exitCode = 1;

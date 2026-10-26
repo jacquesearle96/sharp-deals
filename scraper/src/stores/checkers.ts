@@ -87,7 +87,8 @@ export const checkers: StoreAdapter = {
           [...document.querySelectorAll<HTMLAnchorElement>('a.js-offer-link-item')].map((a) => ({
             lines: a.innerText.split('\n'),
             href: a.getAttribute('href') ?? '',
-            image: a.querySelector('img')?.getAttribute('src') ?? undefined,
+            // The card also holds the store logo and UI icons; the product shot lives under /uploads/offers/.
+            image: a.querySelector('img[src*="/uploads/offers/"]')?.getAttribute('src') ?? undefined,
           })),
         );
         let added = 0;

@@ -1,5 +1,7 @@
 export type StoreId = 'checkers' | 'pnp' | 'woolworths' | 'spar' | 'clicks' | 'dischem';
 
+export const STORES: StoreId[] = ['pnp', 'checkers', 'woolworths', 'spar', 'clicks', 'dischem'];
+
 export type Category = 'grocery' | 'health' | 'baby' | 'tech';
 
 /** Structured form of a store's promo text. `qty` is how many items must be bought. */
@@ -42,4 +44,17 @@ export interface StoreRun {
   error?: string;
   /** ISO timestamp */
   at: string;
+}
+
+/** A product as the app sees it: deals only, with the saving precomputed. */
+export interface DealProduct extends Omit<Product, 'scrapedAt'> {
+  /** Percentage saved against the was-price (or shelf price when there is no was-price) */
+  savePct: number;
+}
+
+/** The single file the app loads. */
+export interface DealIndex {
+  generatedAt: string;
+  runs: StoreRun[];
+  products: DealProduct[];
 }
