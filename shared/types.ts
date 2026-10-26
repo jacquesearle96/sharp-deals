@@ -53,10 +53,23 @@ export interface StoreRun {
   at: string;
 }
 
+/** What we have seen this product cost, over the days we have tracked it. */
+export interface PriceStats {
+  /** Days between the first and latest price we recorded */
+  days: number;
+  /** Lowest and highest best-per-item price seen */
+  low: number;
+  high: number;
+  /** Typical price: the one that stayed in force for the longest share of the time */
+  usual: number;
+}
+
 /** A product as the app sees it: deals only, with the saving precomputed. */
 export interface DealProduct extends Omit<Product, 'scrapedAt'> {
   /** Percentage saved against the was-price (or shelf price when there is no was-price) */
   savePct: number;
+  /** Present once we have tracked the product for at least a day */
+  hist?: PriceStats;
 }
 
 /** The single file the app loads. */

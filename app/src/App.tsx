@@ -4,6 +4,7 @@ import { BottomNav, type Tab } from './components/BottomNav.tsx'
 import { DealCard } from './components/DealCard.tsx'
 import { DealList } from './components/DealList.tsx'
 import { FilterBar } from './components/FilterBar.tsx'
+import { ShareList } from './components/ShareList.tsx'
 import { ShopAround } from './components/ShopAround.tsx'
 import { useDeals, useShopIndex } from './lib/data.ts'
 import { ago, money } from './lib/format.ts'
@@ -91,11 +92,25 @@ function ListScreen({ list }: { list: ReturnType<typeof useShoppingList> }) {
   const byStore = new Map<StoreId, DealProduct[]>()
   for (const d of list.items) byStore.set(d.store, [...(byStore.get(d.store) ?? []), d])
 
+  const share = (
+    <ShareList
+      household={list.household}
+      status={list.status}
+      canShare={list.canShare}
+      onStart={list.startSharing}
+      onJoin={list.join}
+      onLeave={list.leave}
+    />
+  )
+
   if (list.items.length === 0) {
     return (
-      <p className="rounded-2xl border border-dashed border-line p-8 text-center text-muted">
-        Your list is empty. Tap <b>+</b> on any deal to add it.
-      </p>
+      <div className="space-y-4">
+        <p className="rounded-2xl border border-dashed border-line p-8 text-center text-muted">
+          Your list is empty. Tap <b>+</b> on any deal to add it.
+        </p>
+        {share}
+      </div>
     )
   }
 
@@ -110,6 +125,7 @@ function ListScreen({ list }: { list: ReturnType<typeof useShoppingList> }) {
           Clear
         </button>
       </div>
+      {share}
       {[...byStore.entries()].map(([store, items]) => (
         <section key={store} className="space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wide text-muted">{STORE_INFO[store].name}</h2>
