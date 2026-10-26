@@ -7,9 +7,11 @@ share one list that updates within a few seconds.
 
 1. Create a free project at https://supabase.com (any region; Frankfurt or London are closest to South Africa).
 2. In the project, open **SQL Editor > New query**, paste the contents of `schema.sql`, and press **Run**.
-3. Open **Project Settings > API** and copy two values:
+3. Open **Project Settings > API Keys** and copy two values:
    - **Project URL** (looks like `https://abcd1234.supabase.co`)
-   - **anon public** key. This key is designed to be public; it is safe to put in the app.
+   - The **Publishable** key (`sb_publishable_...`, on the first tab). It is designed to be public, so it is
+     safe to put in the app. On older projects use the **anon public** key from the "Legacy" tab instead.
+   - Never use the **Secret** key (or the legacy `service_role` key) in the app.
 4. Create `app/.env.local` with:
 
    ```

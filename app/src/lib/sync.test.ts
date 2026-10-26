@@ -59,6 +59,15 @@ describe('list calls', () => {
     expect(init.headers.apikey).toBe('anon-key')
   })
 
+  it('sends a publishable key in apikey only, and a legacy JWT key in both headers', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => '[]' })
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchList({ url: CFG.url, anonKey: 'sb_publishable_abc' }, 'ABCDEFGHJKMN')
+    await fetchList({ url: CFG.url, anonKey: 'eyJhbGciOi.payload.sig' }, 'ABCDEFGHJKMN')
+    expect(fetchMock.mock.calls[0][1].headers).toEqual({ apikey: 'sb_publishable_abc', 'Content-Type': 'application/json' })
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer eyJhbGciOi.payload.sig')
+  })
+
   it('putItem and deleteItem use the store:id key', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => '' })
     vi.stubGlobal('fetch', fetchMock)

@@ -34,11 +34,11 @@ export const formatCode = (code: string) => code.replace(/(.{4})(?=.)/g, '$1-')
 export const itemKey = (p: Pick<DealProduct, 'store' | 'id'>) => `${p.store}:${p.id}`
 
 async function rpc<T>(cfg: SyncConfig, fn: string, args: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${cfg.url}/rest/v1/rpc/${fn}`, {
-    method: 'POST',
-    headers: { apikey: cfg.anonKey, Authorization: `Bearer ${cfg.anonKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(args),
-  })
+  // Legacy anon keys are JWTs and also go in Authorization. The newer sb_publishable_ keys are not
+  // JWTs and are sent in the apikey header only.
+  const headers: Record<string, string> = { apikey: cfg.anonKey, 'Content-Type': 'application/json' }
+  if (cfg.anonKey.startsWith('eyJ')) headers.Authorization = `Bearer ${cfg.anonKey}`
+  const res = await fetch(`${cfg.url}/rest/v1/rpc/${fn}`, { method: 'POST', headers, body: JSON.stringify(args) })
   if (!res.ok) throw new Error(`Sync failed (${res.status})`)
   const text = await res.text()
   return (text ? JSON.parse(text) : undefined) as T
