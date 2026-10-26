@@ -22,6 +22,8 @@ export interface Product {
   price: number;
   wasPrice?: number;
   promo: Promo;
+  /** ISO date when the promo starts, if it is not live yet */
+  promoStarts?: string;
   /** ISO timestamp when the promo ends, if the store says */
   promoEnds?: string;
   /** Best price per item when the promo is taken up, in rand */

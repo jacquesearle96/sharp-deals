@@ -3,10 +3,11 @@ import { join } from 'node:path';
 import type { Product, StoreId, StoreRun } from '../../shared/types.ts';
 import type { StoreAdapter } from './adapter.ts';
 import { clicks } from './stores/clicks.ts';
+import { dischem } from './stores/dischem.ts';
 import { pnp } from './stores/pnp.ts';
 import { woolworths } from './stores/woolworths.ts';
 
-const ADAPTERS: StoreAdapter[] = [pnp, woolworths, clicks];
+const ADAPTERS: StoreAdapter[] = [pnp, woolworths, clicks, dischem];
 const OUT_DIR = join(import.meta.dirname, '..', '..', 'app', 'public', 'data');
 
 const only = process.argv.slice(2) as StoreId[];

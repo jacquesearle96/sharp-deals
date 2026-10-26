@@ -19,6 +19,10 @@ export function parsePromo(text: string | undefined | null): Promo {
     if (payFor < qty) return { kind: 'free', raw, qty, payFor };
   }
 
+  // "2+1 cheapest free" / "2+1 free": pay for the first N, the last M are free
+  m = t.match(/\b(\d+)\s?\+\s?(\d+)(?: cheapest)? free\b/);
+  if (m) return { kind: 'free', raw, qty: +m[1] + +m[2], payFor: +m[1] };
+
   // "buy 2 get 1 free" / "buy 1 get 1 free"
   m = t.match(/\bbuy (\d+),? get (\d+) free\b/);
   if (m) return { kind: 'free', raw, qty: +m[1] + +m[2], payFor: +m[1] };

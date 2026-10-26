@@ -32,6 +32,9 @@ describe('parsePromo', () => {
     expect(isMultiBuy(a)).toBe(false);
     expect(parsePromo('R29.99')).toMatchObject({ kind: 'price', qty: 1, total: 29.99 });
   });
+  it('parses "2+1 Cheapest Free" as 3 for 2', () => {
+    expect(parsePromo('our 2+1 Cheapest Free deals')).toMatchObject({ kind: 'free', qty: 3, payFor: 2 });
+  });
   it('parses "2for 50" without a rand sign', () => {
     expect(parsePromo('save per offer 2for 50')).toMatchObject({ kind: 'price', qty: 2, total: 50 });
   });
