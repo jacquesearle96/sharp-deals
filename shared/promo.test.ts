@@ -26,6 +26,15 @@ describe('parsePromo', () => {
   it('treats a plain saving as a single discount', () => {
     expect(parsePromo('Save R15')).toMatchObject({ kind: 'discount' });
   });
+  it('treats "Buy 1 For R99.99" and a bare price as single-item specials', () => {
+    const a = parsePromo('Collectaboks: Buy 1 For R99.99');
+    expect(a).toMatchObject({ kind: 'price', qty: 1, total: 99.99 });
+    expect(isMultiBuy(a)).toBe(false);
+    expect(parsePromo('R29.99')).toMatchObject({ kind: 'price', qty: 1, total: 29.99 });
+  });
+  it('parses "3 For R265.00" with trailing space', () => {
+    expect(parsePromo('3 For R265.00 ')).toMatchObject({ kind: 'price', qty: 3, total: 265 });
+  });
   it('returns none for empty text', () => {
     expect(parsePromo('')).toMatchObject({ kind: 'none' });
     expect(parsePromo(undefined)).toMatchObject({ kind: 'none' });

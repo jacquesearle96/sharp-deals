@@ -1,0 +1,11 @@
+{
+  "name": "sharp-deals-scraper",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape": "node src/run.ts"
+  },
+  "dependencies": {
+    "playwright": "^1.64.1"
+  }
+}

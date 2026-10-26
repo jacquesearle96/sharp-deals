@@ -35,6 +35,10 @@ export function parsePromo(text: string | undefined | null): Promo {
   m = t.match(new RegExp(String.raw`\bbuy (\d+)(?: or more)?,? (?:and )?save ${RAND}\b`));
   if (m) return { kind: 'save', raw, qty: +m[1], save: toNumber(m[2]) };
 
+  // bare promo price: "R29.99"
+  m = t.match(new RegExp(String.raw`^${RAND}$`));
+  if (m) return { kind: 'price', raw, qty: 1, total: toNumber(m[1]) };
+
   // single-item discount: "save R10", "20% off", "was R59"
   if (/\bsave\b|% off|\bwas\b|\bnow\b|special/.test(t)) return { kind: 'discount', raw };
 
@@ -58,7 +62,8 @@ export function effectivePrice(price: number, promo: Promo): number {
 }
 
 export const isMultiBuy = (promo: Promo) =>
-  promo.kind === 'free' || promo.kind === 'price' || promo.kind === 'save' || promo.kind === 'percent';
+  (promo.kind === 'free' || promo.kind === 'price' || promo.kind === 'save' || promo.kind === 'percent') &&
+  promo.qty > 1;
 
 /** Short label for a deal badge, e.g. "3 for 2" or "2 for R50". */
 export function promoLabel(promo: Promo): string {
@@ -66,7 +71,7 @@ export function promoLabel(promo: Promo): string {
     case 'free':
       return `${promo.qty} for ${promo.payFor}`;
     case 'price':
-      return `${promo.qty} for R${promo.total}`;
+      return promo.qty > 1 ? `${promo.qty} for R${promo.total}` : `Special R${promo.total}`;
     case 'save':
       return `Buy ${promo.qty}, save R${promo.save}`;
     case 'percent':

@@ -1,7 +1,8 @@
 import { effectivePrice, parsePromo } from '../../../shared/promo.ts';
+import { chromium, type Page } from 'playwright';
 import type { Category, Product } from '../../../shared/types.ts';
 import type { StoreAdapter } from '../adapter.ts';
-import { requestJson, sleep } from '../http.ts';
+import { sleep } from '../http.ts';
 
 const BASE = 'https://www.pnp.co.za/pnphybris/v2/pnp-spa/products/search';
 /** Cape Town store; prices and promos are per store. */
@@ -64,20 +65,29 @@ export function mapProduct(raw: RawProduct, scrapedAt: string): Product | null {
   };
 }
 
-async function searchPage(query: string, page: number): Promise<SearchResponse> {
+/**
+ * Runs the same request the site's own search box makes, from inside a normal
+ * browser session on pnp.co.za (same origin, default browser identity).
+ */
+function searchInPage(page: Page, query: string, pageNo: number): Promise<SearchResponse> {
   const url =
     `${BASE}?fields=${FIELDS}&query=${encodeURIComponent(query)}&pageSize=${PAGE_SIZE}` +
-    `&currentPage=${page}&storeCode=${STORE_CODE}&lang=en&curr=ZAR`;
-  return requestJson<SearchResponse>(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Pnp-Search-Session-Id': '1',
-      'X-Pnp-Search-Client-Id': crypto.randomUUID(),
-      'X-Pnp-Cache-Key': 'anonymous',
-    },
-    body: '{}',
-  });
+    `&currentPage=${pageNo}&storeCode=${STORE_CODE}&lang=en&curr=ZAR`;
+  return page.evaluate(async (u) => {
+    const res = await fetch(u, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-Pnp-Search-Session-Id': '1',
+        'X-Pnp-Search-Client-Id': crypto.randomUUID(),
+        'X-Pnp-Cache-Key': 'anonymous',
+      },
+      body: '{}',
+    });
+    if (!res.ok) throw new Error(`${res.status} from PnP search`);
+    return res.json();
+  }, url);
 }
 
 export const pnp: StoreAdapter = {
@@ -85,16 +95,24 @@ export const pnp: StoreAdapter = {
   async run() {
     const scrapedAt = new Date().toISOString();
     const byId = new Map<string, Product>();
-    for (const term of TERMS) {
-      for (let page = 0; page < MAX_PAGES_PER_TERM; page++) {
-        const res = await searchPage(term, page);
-        for (const raw of res.products ?? []) {
-          const p = mapProduct(raw, scrapedAt);
-          if (p) byId.set(p.id, p);
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage();
+      await page.goto('https://www.pnp.co.za/', { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(3000);
+      for (const term of TERMS) {
+        for (let pageNo = 0; pageNo < MAX_PAGES_PER_TERM; pageNo++) {
+          const res = await searchInPage(page, term, pageNo);
+          for (const raw of res.products ?? []) {
+            const p = mapProduct(raw, scrapedAt);
+            if (p) byId.set(p.id, p);
+          }
+          await sleep(DELAY_MS);
+          if (pageNo + 1 >= (res.pagination?.totalPages ?? 0)) break;
         }
-        await sleep(DELAY_MS);
-        if (page + 1 >= (res.pagination?.totalPages ?? 0)) break;
       }
+    } finally {
+      await browser.close();
     }
     return [...byId.values()];
   },
