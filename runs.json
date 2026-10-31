@@ -1,0 +1,71 @@
+[
+ {
+  "store": "pnp",
+  "ok": true,
+  "count": 10919,
+  "at": "2026-10-31T11:52:55.701Z",
+  "notes": [],
+  "error": "Error: page.evaluate: Error: 403 from PnP search\n    at eval (eval at evaluate (:370:30), <anonymous>:13:24)\n    at async <anonymous>:396:30"
+ },
+ {
+  "store": "checkers",
+  "ok": true,
+  "count": 1220,
+  "at": "2026-10-31T16:59:20.908Z",
+  "notes": []
+ },
+ {
+  "store": "woolworths",
+  "ok": true,
+  "count": 3057,
+  "at": "2026-10-31T17:01:17.533Z",
+  "notes": []
+ },
+ {
+  "store": "foodlovers",
+  "ok": true,
+  "count": 544,
+  "at": "2026-10-31T17:15:43.213Z",
+  "notes": []
+ },
+ {
+  "store": "spar",
+  "ok": true,
+  "count": 10,
+  "at": "2026-10-31T17:25:19.122Z",
+  "notes": []
+ },
+ {
+  "store": "clicks",
+  "ok": true,
+  "count": 1421,
+  "at": "2026-10-31T17:16:45.395Z",
+  "notes": []
+ },
+ {
+  "store": "dischem",
+  "ok": true,
+  "count": 354,
+  "at": "2026-10-31T05:05:47.087Z",
+  "notes": [
+   "no products on https://www.dischem.co.za/on-promotion: title \"Just a moment...\" at https://www.dischem.co.za/on-promotion?p=1; text: www.dischem.co.za Performing security verification This website uses a security service to protect against malicious bot"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "babycity",
+  "ok": true,
+  "count": 2913,
+  "at": "2026-10-31T17:25:27.914Z",
+  "notes": []
+ },
+ {
+  "store": "babiesrus",
+  "ok": true,
+  "count": 2157,
+  "at": "2026-10-31T17:34:35.147Z",
+  "notes": [
+   "no products on https://www.babiesrus.co.za/promotions/view-all-deals: title \"View All Deals - Promotions | Babies R Us Online\" at https://www.babiesrus.co.za/promotions/view-all-deals?p=1; text: Skip to Content Stores Help My Account Sign In Register My Cart Search Search Department Brands Featured "
+  ]
+ }
+]
