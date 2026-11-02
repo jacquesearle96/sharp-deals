@@ -4,6 +4,13 @@ const NUM = String.raw`(\d+(?:[.,]\d{1,2})?)`;
 const RAND = String.raw`r\s?${NUM}`;
 
 const toNumber = (s: string) => parseFloat(s.replace(',', '.'));
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Words after a multi-buy price that make it a price for each item rather than for the bundle,
+ * e.g. "2 for R204.99 per pack" means R204.99 each when buying two.
+ */
+const EACH = String.raw`\s?(?:each\b|ea\b|per (?:pack|item|unit|one|bottle|tin|can|box|bag|tub|jar|roll|pair)\b|\/\s?(?:pack|each|ea|item|unit)\b)`;
 
 /** Turns a store's promo text (e.g. "3 for 2", "Buy 2 Save R10") into a structured promo. */
 export function parsePromo(text: string | undefined | null): Promo {
@@ -27,9 +34,13 @@ export function parsePromo(text: string | undefined | null): Promo {
   m = t.match(/\bbuy (\d+),? get (\d+) free\b/);
   if (m) return { kind: 'free', raw, qty: +m[1] + +m[2], payFor: +m[1] };
 
-  // "2 for R50" / "buy 2 for R50" / "2for 50"
-  m = t.match(new RegExp(String.raw`\b(\d+)\s?for\s?${RAND.replace('r\\s?', 'r?\\s?')}`));
-  if (m) return { kind: 'price', raw, qty: +m[1], total: toNumber(m[2]) };
+  // "2 for R50" / "buy 2 for R50" / "2for 50", and "2 for R204.99 per pack" (a price for each item)
+  m = t.match(new RegExp(String.raw`\b(\d+)\s?for\s?${RAND.replace('r\\s?', 'r?\\s?')}(${EACH})?`));
+  if (m) {
+    const qty = +m[1];
+    const amount = toNumber(m[2]);
+    return { kind: 'price', raw, qty, total: m[3] ? round2(amount * qty) : amount };
+  }
 
   // "buy 2 save 20%" / "buy 2 get 20% off"
   m = t.match(/\bbuy (\d+)(?: or more)?,? (?:and )?(?:save|get) (\d+(?:\.\d+)?)%/);
@@ -69,6 +80,10 @@ export function effectivePrice(price: number, promo: Promo): number {
   }
 }
 
+/** True when the store marks the item as on special: a promo, or a was-price above today's price. */
+export const isDeal = (p: { promo: Promo; price: number; wasPrice?: number }) =>
+  p.promo.kind !== 'none' || (p.wasPrice !== undefined && p.wasPrice > p.price);
+
 export const isMultiBuy = (promo: Promo) =>
   (promo.kind === 'free' || promo.kind === 'price' || promo.kind === 'save' || promo.kind === 'percent') &&
   promo.qty > 1;
@@ -79,7 +94,7 @@ export function promoLabel(promo: Promo): string {
     case 'free':
       return `${promo.qty} for ${promo.payFor}`;
     case 'price':
-      return promo.qty > 1 ? `${promo.qty} for R${promo.total}` : `Special R${promo.total}`;
+      return promo.qty > 1 ? `${promo.qty} for R${round2(promo.total)}` : `Special R${round2(promo.total)}`;
     case 'save':
       return `Buy ${promo.qty}, save R${promo.save}`;
     case 'percent':

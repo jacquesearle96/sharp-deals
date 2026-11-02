@@ -1,11 +1,10 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isDeal } from '../../shared/promo.ts';
 import { readHistory, stats } from './history.ts';
 import { DEAL_STORES, SHOP_STORES, STORES, type DealIndex, type DealProduct, type PriceStats, type Product, type StoreRun } from '../../shared/types.ts';
 
 export const today = () => new Date().toISOString().slice(0, 10);
-
-const isDeal = (p: Product) => p.promo.kind !== 'none' || (p.wasPrice !== undefined && p.wasPrice > p.price);
 
 /** Where a store's site-relative image paths ("/medias/x.jpg") point. Anything else relative is dropped. */
 const IMAGE_ORIGINS: Partial<Record<Product['store'], string>> = {

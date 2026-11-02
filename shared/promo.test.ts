@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectivePrice, isMultiBuy, parsePromo, promoLabel } from './promo.ts';
+import { effectivePrice, isDeal, isMultiBuy, parsePromo, promoLabel } from './promo.ts';
 
 describe('parsePromo', () => {
   it('parses "3 for 2"', () => {
@@ -47,6 +47,17 @@ describe('parsePromo', () => {
   it('parses "3 For R265.00" with trailing space', () => {
     expect(parsePromo('3 For R265.00 ')).toMatchObject({ kind: 'price', qty: 3, total: 265 });
   });
+  it('reads "2 for R204.99 per pack" as R204.99 for each of the two', () => {
+    const p = parsePromo('2 for R204.99 per pack');
+    expect(p).toMatchObject({ kind: 'price', qty: 2, total: 409.98 });
+    expect(effectivePrice(249.99, p)).toBeCloseTo(204.99);
+    expect(promoLabel(p)).toBe('2 for R409.98');
+  });
+  it('reads "each" and "/pack" after a multi-buy price as a price per item', () => {
+    expect(parsePromo('Buy 3 for R30 each')).toMatchObject({ kind: 'price', qty: 3, total: 90 });
+    expect(parsePromo('2 for R45.50/pack')).toMatchObject({ kind: 'price', qty: 2, total: 91 });
+    expect(parsePromo('2 for R50 every day')).toMatchObject({ kind: 'price', qty: 2, total: 50 });
+  });
   it('returns none for empty text', () => {
     expect(parsePromo('')).toMatchObject({ kind: 'none' });
     expect(parsePromo(undefined)).toMatchObject({ kind: 'none' });
@@ -75,6 +86,11 @@ describe('helpers', () => {
   it('flags multi-buys only', () => {
     expect(isMultiBuy(parsePromo('3 for 2'))).toBe(true);
     expect(isMultiBuy(parsePromo('Save R15'))).toBe(false);
+  });
+  it('counts a promo or a was-price above the price as a deal', () => {
+    expect(isDeal({ promo: parsePromo(''), price: 10 })).toBe(false);
+    expect(isDeal({ promo: parsePromo(''), price: 10, wasPrice: 12 })).toBe(true);
+    expect(isDeal({ promo: parsePromo('3 for 2'), price: 10 })).toBe(true);
   });
   it('labels deals', () => {
     expect(promoLabel(parsePromo('3 for 2'))).toBe('3 for 2');

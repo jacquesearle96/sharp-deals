@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react'
 import { DEAL_STORES, type StoreId } from '../../../shared/types.ts'
 import type { Filters, SortKey } from '../lib/query.ts'
 import { STORE_INFO } from '../lib/stores.ts'
@@ -32,7 +33,7 @@ export function FilterBar({ filters, onChange, counts, hideSearch, stores = DEAL
     <div className="space-y-3">
       {!hideSearch && (
         <label className="flex items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 shadow-sm focus-within:border-brand">
-          <span aria-hidden>🔍</span>
+          <Search aria-hidden size={18} className="shrink-0 text-muted" />
           <input
             type="search"
             value={filters.text}

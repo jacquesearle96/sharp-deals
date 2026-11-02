@@ -1,3 +1,4 @@
+import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { SyncStatus } from '../lib/list.ts'
 import { formatCode, normalizeCode } from '../lib/sync.ts'
@@ -56,7 +57,8 @@ export function ShareList({ household, status, canShare, onStart, onJoin, onLeav
         <p className="mt-2 text-sm text-muted">Enter this code on your partner’s phone:</p>
         <div className="mt-2 flex items-center gap-2">
           <code className="flex-1 rounded-xl bg-bg px-3 py-2 text-center text-lg font-bold tracking-widest">{formatCode(household)}</code>
-          <button type="button" onClick={copy} className="rounded-xl border border-line px-3 py-2 text-sm font-semibold">
+          <button type="button" onClick={copy} className="flex items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-sm font-semibold">
+            {copied ? <Check aria-hidden size={16} /> : <Copy aria-hidden size={16} />}
             {copied ? 'Copied' : 'Copy'}
           </button>
         </div>

@@ -1,9 +1,15 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isDeal } from '../../shared/promo.ts';
 import type { PriceStats, Product, StoreId } from '../../shared/types.ts';
 
-/** One product's price over time: [YYYY-MM-DD, best per-item price in rand]. */
-export type Series = [string, number][];
+/**
+ * One product's price over time: [YYYY-MM-DD, best per-item price in rand], with a trailing 1 when the
+ * store had no special on the product that day. That is the only way to learn its normal price: stores
+ * that list specials only show the special price, so a run of identical prices proves nothing on its own.
+ */
+export type Point = [string, number] | [string, number, 1];
+export type Series = Point[];
 export type HistoryFile = Record<string, Series>;
 
 /** How far back history is kept. */
@@ -14,12 +20,15 @@ const REFRESH_DAYS = 7;
 const DAY = 86_400_000;
 export const daysBetween = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / DAY);
 
-/** Adds today's price, but only when it changed or the last point is getting old. */
-export function appendPoint(series: Series | undefined, date: string, price: number): Series {
-  if (!series || series.length === 0) return [[date, price]];
-  const [lastDate, lastPrice] = series[series.length - 1];
-  if (lastDate === date) return [...series.slice(0, -1), [date, price]];
-  if (lastPrice !== price || daysBetween(lastDate, date) >= REFRESH_DAYS) return [...series, [date, price]];
+const isRegular = (p: Point) => p[2] === 1;
+
+/** Adds today's price, but only when it (or whether it was on special) changed, or the last point is getting old. */
+export function appendPoint(series: Series | undefined, date: string, price: number, regular = false): Series {
+  const point: Point = regular ? [date, price, 1] : [date, price];
+  if (!series || series.length === 0) return [point];
+  const last = series[series.length - 1];
+  if (last[0] === date) return [...series.slice(0, -1), point];
+  if (last[1] !== price || isRegular(last) !== regular || daysBetween(last[0], date) >= REFRESH_DAYS) return [...series, point];
   return series;
 }
 
@@ -36,7 +45,7 @@ export function updateHistory(prev: HistoryFile, products: Product[], date: stri
     const kept = prune(series, date);
     if (daysBetween(kept[kept.length - 1][0], date) <= KEEP_DAYS) next[id] = kept;
   }
-  for (const p of products) next[p.id] = prune(appendPoint(next[p.id], date, p.effectivePrice), date);
+  for (const p of products) next[p.id] = prune(appendPoint(next[p.id], date, p.effectivePrice, !isDeal(p)), date);
   return next;
 }
 
@@ -58,12 +67,36 @@ export function stats(series: Series | undefined, date: string): PriceStats | un
     }
   }
   const prices = series.map(([, p]) => p);
-  return {
+  const regulars = series.filter(isRegular);
+  const out: PriceStats = {
     days: daysBetween(series[0][0], date),
     low: Math.min(...prices),
     high: Math.max(...prices),
     usual,
+    steady: steadyDays(series, date),
   };
+  if (regulars.length) {
+    out.regular = regulars[regulars.length - 1][1];
+    out.regularHigh = Math.max(...regulars.map(([, p]) => p));
+  }
+  return out;
+}
+
+/**
+ * Days the latest price has held. An unchanged price is re-recorded weekly, so a longer gap between points
+ * means the product dropped out of the listings for a while (say, between two promotions) and the count
+ * starts again after it.
+ */
+export function steadyDays(series: Series, date: string): number {
+  const maxGap = REFRESH_DAYS + 1;
+  const last = series[series.length - 1];
+  if (daysBetween(last[0], date) > maxGap) return 0;
+  let start = last[0];
+  for (let i = series.length - 2; i >= 0; i--) {
+    if (series[i][1] !== last[1] || daysBetween(series[i][0], start) > maxGap) break;
+    start = series[i][0];
+  }
+  return daysBetween(start, date);
 }
 
 export const historyPath = (dir: string, store: StoreId) => join(dir, 'history', `${store}.json`);

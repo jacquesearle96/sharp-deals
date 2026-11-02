@@ -5,6 +5,7 @@ import type { StoreAdapter } from './adapter.ts';
 import { dropRelativeImages, note, takeNotes } from './diagnostics.ts';
 import { readHistory, updateHistory, writeHistory } from './history.ts';
 import { buildIndex, buildShopIndex, mergeRuns, today } from './index-data.ts';
+import { keepUnexpired } from './leaflet.ts';
 import { babiesrus } from './stores/babiesrus.ts';
 import { babycity } from './stores/babycity.ts';
 import { checkers } from './stores/checkers.ts';
@@ -25,6 +26,14 @@ const GROUPS: Record<string, StoreId[]> = {
 const OUT_DIR = join(import.meta.dirname, '..', '..', 'app', 'public', 'data');
 
 /** Appends today's prices to the store's history file. */
+const readPrevious = async (store: StoreId): Promise<Product[]> => {
+  try {
+    return JSON.parse(await readFile(join(OUT_DIR, `${store}.json`), 'utf8')) as Product[];
+  } catch {
+    return [];
+  }
+};
+
 const recordHistory = async (store: StoreId, products: Product[]) =>
   writeHistory(OUT_DIR, store, updateHistory(await readHistory(OUT_DIR, store), products, today()));
 
@@ -41,8 +50,16 @@ for (const adapter of selected) {
   const at = new Date().toISOString();
   takeNotes(); // start this store with a clean list
   try {
-    const scraped = await adapter.run();
+    let scraped = await adapter.run();
     if (scraped.length === 0) throw new Error('adapter returned no products');
+    const previous = await readPrevious(adapter.store);
+    if (adapter.keepUnexpired) {
+      const kept = keepUnexpired(previous, scraped, today());
+      if (kept.length) note(`found ${scraped.length}; kept ${kept.length} unexpired items from the last run`);
+      scraped = [...scraped, ...kept];
+    } else if (previous.length >= 50 && scraped.length < previous.length / 2) {
+      note(`only ${scraped.length} products, down from ${previous.length} last run`);
+    }
     const { products, dropped } = dropRelativeImages(scraped);
     if (dropped) note(`${dropped} images had a relative address and were dropped`);
     await writeFile(join(OUT_DIR, `${adapter.store}.json`), JSON.stringify(products));

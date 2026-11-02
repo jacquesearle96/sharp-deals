@@ -1,3 +1,4 @@
+import { Check, ChartLine, ChevronDown, CircleCheck, Plus, ShoppingCart, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { isMultiBuy, promoLabel } from '../../../shared/promo.ts'
 import type { DealProduct } from '../../../shared/types.ts'
@@ -32,7 +33,9 @@ export function DealCard({ deal, inList, onToggle }: Props) {
           {deal.image ? (
             <img src={deal.image} alt="" loading="lazy" className="h-full w-full object-contain" />
           ) : (
-            <div className="grid h-full w-full place-items-center text-3xl">🛒</div>
+            <div className="grid h-full w-full place-items-center text-muted">
+              <ShoppingCart aria-hidden size={32} />
+            </div>
           )}
           {deal.savePct > 0 && (
             <span className="absolute left-1 top-1 rounded-md bg-ok px-1.5 py-0.5 text-[11px] font-bold text-white">
@@ -72,11 +75,11 @@ export function DealCard({ deal, inList, onToggle }: Props) {
               onClick={() => onToggle(deal)}
               aria-pressed={inList}
               aria-label={inList ? 'Remove from list' : 'Add to list'}
-              className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border text-lg transition active:scale-90 ${
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border transition active:scale-90 ${
                 inList ? 'border-brand bg-brand text-white' : 'border-line bg-bg text-ink'
               }`}
             >
-              {inList ? '✓' : '+'}
+              {inList ? <Check aria-hidden size={18} strokeWidth={2.5} /> : <Plus aria-hidden size={18} strokeWidth={2.5} />}
             </button>
           </div>
         </div>
@@ -87,11 +90,11 @@ export function DealCard({ deal, inList, onToggle }: Props) {
           {notes.map((n) => (
             <li
               key={n.text}
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
                 n.kind === 'good' ? 'bg-ok/15 text-ok' : 'bg-brand2/20 text-brand'
               }`}
             >
-              {n.kind === 'good' ? '✓ ' : '⚠ '}
+              {n.kind === 'good' ? <CircleCheck aria-hidden size={14} /> : <TriangleAlert aria-hidden size={14} />}
               {n.text}
             </li>
           ))}
@@ -102,9 +105,11 @@ export function DealCard({ deal, inList, onToggle }: Props) {
         type="button"
         onClick={() => setShowHistory((v) => !v)}
         aria-expanded={showHistory}
-        className="mt-2 text-xs font-semibold text-muted"
+        className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-muted"
       >
-        📈 {showHistory ? 'Hide price history' : 'Price history'}
+        <ChartLine aria-hidden size={14} />
+        {showHistory ? 'Hide price history' : 'Price history'}
+        <ChevronDown aria-hidden size={14} className={`transition ${showHistory ? 'rotate-180' : ''}`} />
       </button>
       {showHistory && (
         <div className="mt-2">
