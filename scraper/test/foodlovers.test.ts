@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { keepUnexpired, mapLeafletCard } from '../src/leaflet.ts';
+import { isNotFound, keepUnexpired, mapLeafletCard } from '../src/leaflet.ts';
 
 const NOW = '2026-10-26T12:00:00.000Z';
 const card = (text: string, href = '/view/specials/food-lover-s-market-catalogue-3871000?offer=70001#page=2') => ({ lines: text.split(' | '), href });
@@ -54,5 +54,14 @@ describe('keepUnexpired', () => {
     const previous = [item('a', '2026-11-08'), item('b', '2026-11-02'), item('c', '2026-11-01'), item('d')];
     const fresh = [item('a', '2026-11-08'), item('e', '2026-11-08')];
     expect(keepUnexpired(previous, fresh, '2026-11-02').map((p) => p.id)).toEqual(['b']);
+  });
+});
+
+describe('end of the listing', () => {
+  it('treats a 404 or a "Not found" page as the end, not a failure', () => {
+    expect(isNotFound(404, 'Anything')).toBe(true);
+    expect(isNotFound(200, 'Not found')).toBe(true);
+    expect(isNotFound(200, "Food Lover's Market specials")).toBe(false);
+    expect(isNotFound(undefined, 'Just a moment...')).toBe(false);
   });
 });

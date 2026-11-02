@@ -96,11 +96,18 @@ const readCards = (page: Page): Promise<CardText[]> =>
     })),
   );
 
-/** Opens one listing page, trying again (with a growing pause) when the offers do not show. Null if they never do. */
-async function loadPage(page: Page, url: string): Promise<CardText[] | null> {
+/** True when the site answered "this page does not exist", which is how it marks the end of a store's listing. */
+export const isNotFound = (status: number | undefined, title: string) => status === 404 || /^not found\b/i.test(title.trim());
+
+/**
+ * Opens one listing page, trying again (with a growing pause) when the offers do not show.
+ * Returns 'end' when the page does not exist (past the last page), or null when it never loaded properly.
+ */
+async function loadPage(page: Page, url: string): Promise<CardText[] | 'end' | null> {
   for (let attempt = 1; attempt <= PAGE_ATTEMPTS; attempt++) {
     try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      if (isNotFound(response?.status(), await page.title())) return 'end';
       if (await page.waitForSelector('a.js-offer-link-item', { timeout: 20_000 }).then(() => true, () => false)) {
         return await readCards(page);
       }
@@ -126,6 +133,7 @@ export const createLeafletAdapter = (store: StoreId, slug: string): StoreAdapter
       let failedInARow = 0;
       for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
         const cards = await loadPage(page, `${LISTING}?page=${pageNo}`);
+        if (cards === 'end') break;
         if (!cards) {
           // One slow or blocked page must not end the run: earlier this silently cut the listing short.
           note(`page ${pageNo} showed no offers after ${PAGE_ATTEMPTS} tries: ${await describePage(page)}`);
