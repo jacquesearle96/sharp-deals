@@ -1,7 +1,8 @@
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import { effectivePrice, isMultiBuy, parsePromo } from '../../shared/promo.ts';
 import type { Product, Promo, StoreId } from '../../shared/types.ts';
 import type { StoreAdapter } from './adapter.ts';
+import { describePage, note } from './diagnostics.ts';
 import { sleep } from './http.ts';
 
 /**
@@ -12,6 +13,10 @@ import { sleep } from './http.ts';
 const ORIGIN = 'https://www.cataloguespecials.co.za';
 const MAX_PAGES = 45;
 const DELAY_MS = 1500;
+/** Tries per listing page before giving up on it. */
+const PAGE_ATTEMPTS = 3;
+/** Stop after this many listing pages in a row fail to show any offers. */
+const MAX_FAILED_PAGES = 2;
 
 export interface CardText {
   /** innerText of one offer card, split into lines */
@@ -55,7 +60,7 @@ export function mapLeafletCard(card: CardText, store: StoreId, scrapedAt: string
   const parsed = parsePromo(multiBuyText);
   // Everything in a leaflet is a special, even when it shows no was-price, so it must count as a deal.
   const promo: Promo = parsed.kind === 'none' ? { kind: 'discount', raw: 'In the leaflet' } : parsed;
-  const id = card.href.match(/offer=(\d+)/)?.[1] ?? card.href;
+  const id = card.href.match(/offer[=-](\d+)/)?.[1] ?? card.href;
   return {
     store,
     id,
@@ -72,9 +77,45 @@ export function mapLeafletCard(card: CardText, store: StoreId, scrapedAt: string
   };
 }
 
+/**
+ * Items the last run found that this run did not, kept while their leaflet is still running. A leaflet
+ * item stays on offer until the leaflet ends, so a missing item almost always means a page failed to load.
+ */
+export function keepUnexpired(previous: Product[], fresh: Product[], today: string): Product[] {
+  const seen = new Set(fresh.map((p) => p.id));
+  return previous.filter((p) => !seen.has(p.id) && p.promoEnds !== undefined && p.promoEnds.slice(0, 10) >= today);
+}
+
+const readCards = (page: Page): Promise<CardText[]> =>
+  page.evaluate(() =>
+    [...document.querySelectorAll<HTMLAnchorElement>('a.js-offer-link-item')].map((a) => ({
+      lines: a.innerText.split('\n'),
+      href: a.getAttribute('href') ?? '',
+      // The card also holds the store logo and UI icons; the product shot lives under /uploads/offers/.
+      image: a.querySelector('img[src*="/uploads/offers/"]')?.getAttribute('src') ?? undefined,
+    })),
+  );
+
+/** Opens one listing page, trying again (with a growing pause) when the offers do not show. Null if they never do. */
+async function loadPage(page: Page, url: string): Promise<CardText[] | null> {
+  for (let attempt = 1; attempt <= PAGE_ATTEMPTS; attempt++) {
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
+      if (await page.waitForSelector('a.js-offer-link-item', { timeout: 20_000 }).then(() => true, () => false)) {
+        return await readCards(page);
+      }
+    } catch {
+      // A navigation timeout or dropped connection: try again below.
+    }
+    if (attempt < PAGE_ATTEMPTS) await sleep(attempt * 5000);
+  }
+  return null;
+}
+
 /** An adapter for one store's page on the aggregator, e.g. slug "checkers" or "food-lover-s-market". */
 export const createLeafletAdapter = (store: StoreId, slug: string): StoreAdapter => ({
   store,
+  keepUnexpired: true,
   async run() {
     const LISTING = `${ORIGIN}/stores/${slug}/specials`;
     const scrapedAt = new Date().toISOString();
@@ -82,18 +123,16 @@ export const createLeafletAdapter = (store: StoreId, slug: string): StoreAdapter
     const browser = await chromium.launch();
     try {
       const page = await browser.newPage();
+      let failedInARow = 0;
       for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
-        await page.goto(`${LISTING}?page=${pageNo}`, { waitUntil: 'domcontentloaded' });
-        const found = await page.waitForSelector('a.js-offer-link-item', { timeout: 20_000 }).then(() => true, () => false);
-        if (!found) break;
-        const cards: CardText[] = await page.evaluate(() =>
-          [...document.querySelectorAll<HTMLAnchorElement>('a.js-offer-link-item')].map((a) => ({
-            lines: a.innerText.split('\n'),
-            href: a.getAttribute('href') ?? '',
-            // The card also holds the store logo and UI icons; the product shot lives under /uploads/offers/.
-            image: a.querySelector('img[src*="/uploads/offers/"]')?.getAttribute('src') ?? undefined,
-          })),
-        );
+        const cards = await loadPage(page, `${LISTING}?page=${pageNo}`);
+        if (!cards) {
+          // One slow or blocked page must not end the run: earlier this silently cut the listing short.
+          note(`page ${pageNo} showed no offers after ${PAGE_ATTEMPTS} tries: ${await describePage(page)}`);
+          if (++failedInARow >= MAX_FAILED_PAGES) break;
+          continue;
+        }
+        failedInARow = 0;
         let added = 0;
         for (const card of cards) {
           const p = mapLeafletCard(card, store, scrapedAt);
