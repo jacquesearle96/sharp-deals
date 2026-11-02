@@ -1,10 +1,12 @@
+import { Flame, Search, ShoppingBag, ShoppingBasket, type LucideIcon } from 'lucide-react'
+
 export type Tab = 'search' | 'deals' | 'shop' | 'list'
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'search', label: 'Deals', icon: '🔍' },
-  { id: 'deals', label: 'Top deals', icon: '🔥' },
-  { id: 'shop', label: 'Shop around', icon: '🛍️' },
-  { id: 'list', label: 'My list', icon: '🧺' },
+const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
+  { id: 'search', label: 'Deals', icon: Search },
+  { id: 'deals', label: 'Top deals', icon: Flame },
+  { id: 'shop', label: 'Shop around', icon: ShoppingBag },
+  { id: 'list', label: 'My list', icon: ShoppingBasket },
 ]
 
 interface Props {
@@ -27,7 +29,7 @@ export function BottomNav({ tab, onChange, listCount }: Props) {
                 tab === t.id ? 'text-brand' : 'text-muted'
               }`}
             >
-              <span className="text-xl leading-none">{t.icon}</span>
+              <t.icon aria-hidden size={22} strokeWidth={tab === t.id ? 2.4 : 2} />
               {t.label}
               {t.id === 'list' && listCount > 0 && (
                 <span className="absolute right-[28%] top-1 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">

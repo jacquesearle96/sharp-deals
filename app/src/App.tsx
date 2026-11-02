@@ -1,3 +1,4 @@
+import { Plus, Sparkles, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { DealProduct, StoreId } from '../../shared/types.ts'
 import { BottomNav, type Tab } from './components/BottomNav.tsx'
@@ -46,8 +47,9 @@ export default function App() {
           )}
         </div>
         {updated && (
-          <p role="status" className="mt-2 rounded-xl bg-ok/15 px-3 py-1.5 text-center text-sm font-semibold text-ok">
-            ✨ New deals loaded
+          <p role="status" className="mt-2 flex items-center justify-center gap-1.5 rounded-xl bg-ok/15 px-3 py-1.5 text-sm font-semibold text-ok">
+            <Sparkles aria-hidden size={16} />
+            New deals loaded
           </p>
         )}
       </header>
@@ -112,7 +114,7 @@ function ListScreen({ list }: { list: ReturnType<typeof useShoppingList> }) {
     return (
       <div className="space-y-4">
         <p className="rounded-2xl border border-dashed border-line p-8 text-center text-muted">
-          Your list is empty. Tap <b>+</b> on any deal to add it.
+          Your list is empty. Tap <Plus aria-label="plus" size={16} className="inline align-[-3px]" strokeWidth={2.5} /> on any deal to add it.
         </p>
         {share}
       </div>
@@ -123,10 +125,11 @@ function ListScreen({ list }: { list: ReturnType<typeof useShoppingList> }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-brand to-brand2 p-4 text-white">
         <div>
-          <p className="text-sm opacity-90">{list.items.length} items</p>
+          <p className="text-sm opacity-90">{list.items.length} {list.items.length === 1 ? 'item' : 'items'}</p>
           <p className="text-2xl font-extrabold">{money(total)}</p>
         </div>
-        <button type="button" onClick={list.clear} className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">
+        <button type="button" onClick={list.clear} className="flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">
+          <Trash2 aria-hidden size={16} />
           Clear
         </button>
       </div>

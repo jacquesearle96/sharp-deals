@@ -53,9 +53,21 @@ export function stickerPromo(stickers: string[]): string | undefined {
   return undefined;
 }
 
-/** The detail page states the real deal in a sentence like "save per offer 2for 50". */
+/**
+ * The detail page states the real deal in a sentence like "save per offer 2for 50". A qualifier such as
+ * "per pack" can sit on its own line under the price, so it is joined on. Lines that only look like a deal
+ * (a slogan such as "Buy 2 for them and keep 1 for you") are skipped.
+ */
 export function promoFromPageText(text: string): string | undefined {
-  return text.split('\n').map((l) => l.trim()).find((l) => /\d\s?for\s?r?\s?\d|\bsave \d+%|buy \d/i.test(l) && l.length < 200);
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.length >= 200 || !/\d\s?for\s?r?\s?\d|\bsave \d+%|buy \d/i.test(line)) continue;
+    const next = lines[i + 1] ?? '';
+    const candidate = /^(?:each|ea|per \w+|\/\s?\w+)\.?$/i.test(next) ? `${line} ${next}` : line;
+    if (parsePromo(candidate).kind !== 'none') return candidate;
+  }
+  return undefined;
 }
 
 export function mapTile(tile: Tile, promoText: string | undefined, scrapedAt: string, category: Category): Product | null {

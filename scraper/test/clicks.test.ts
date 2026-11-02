@@ -23,6 +23,14 @@ describe('clicks promoFromPageText', () => {
     const text = 'Details\nenglish blazer rollon 50ml save per offer 2for 50.Valid until 23 November 2026\nReviews';
     expect(promoFromPageText(text)).toContain('2for 50');
   });
+  it('keeps a "per pack" qualifier, even on the line below the price', () => {
+    expect(promoFromPageText('Pay day savings\n2 for R204.99 per pack\n1 for R249.99 per pack')).toBe('2 for R204.99 per pack');
+    expect(promoFromPageText('Pay day savings\n2 for R204.99\nper pack\nR 249.99')).toBe('2 for R204.99 per pack');
+  });
+  it('skips slogans that only look like a deal', () => {
+    expect(promoFromPageText('Buy 2 for them and keep 1 for you this festive season!\nsave per offer 3for 2')).toBe('save per offer 3for 2');
+    expect(promoFromPageText('Buy 2 for them and keep 1 for you this festive season!')).toBeUndefined();
+  });
   it('returns undefined when there is no deal text', () => {
     expect(promoFromPageText('Nothing here\nR 34.99')).toBeUndefined();
   });
@@ -44,6 +52,12 @@ describe('clicks mapTile', () => {
     const p = mapTile(tile('Yardley | English Blazer Anti-Perspirant Roll-on Black 50ml | R 34.99 | On promo'), 'save per offer 2for 50', NOW, 'health')!;
     expect(p.promo).toMatchObject({ kind: 'price', qty: 2, total: 50 });
     expect(p.effectivePrice).toBe(25);
+  });
+
+  it('prices a "2 for R204.99 per pack" deal at R204.99 each, not half of it', () => {
+    const p = mapTile(tile('Pampers | Active Baby Nappies Size 4 Jumbo 66 | R 249.99 | On promo'), '2 for R204.99 per pack', NOW, 'baby')!;
+    expect(p.promo).toMatchObject({ kind: 'price', qty: 2, total: 409.98 });
+    expect(p.effectivePrice).toBe(204.99);
   });
 
   it('drops the "See more variants" label and skips tiles without a price', () => {

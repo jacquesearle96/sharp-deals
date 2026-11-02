@@ -64,6 +64,12 @@ export interface PriceStats {
   high: number;
   /** Typical price: the one that stayed in force for the longest share of the time */
   usual: number;
+  /** Latest price seen while the store had no special on it, if we have ever seen that */
+  regular?: number;
+  /** Highest price seen with no special on */
+  regularHigh?: number;
+  /** Days today's price has held without a break in tracking */
+  steady?: number;
 }
 
 /** A product as the app sees it: deals only, with the saving precomputed. */

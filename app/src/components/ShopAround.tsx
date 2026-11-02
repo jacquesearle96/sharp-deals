@@ -1,3 +1,4 @@
+import { Baby, ExternalLink, Gamepad2, Search, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { SHOP_STORES, type DealProduct, type StoreId } from '../../../shared/types.ts'
 import type { IndexState } from '../lib/data.ts'
@@ -16,9 +17,9 @@ function loadRecent(): string[] {
   }
 }
 
-const CATEGORIES: { id: ShopCategory; label: string; icon: string }[] = [
-  { id: 'tech', label: 'Tech', icon: '🎮' },
-  { id: 'baby', label: 'Baby', icon: '🍼' },
+const CATEGORIES: { id: ShopCategory; label: string; icon: LucideIcon }[] = [
+  { id: 'tech', label: 'Tech', icon: Gamepad2 },
+  { id: 'baby', label: 'Baby', icon: Baby },
 ]
 
 interface Props {
@@ -86,17 +87,18 @@ export function ShopAround({ shop, has, onToggle }: Props) {
               setStores([])
             }}
             aria-pressed={category === c.id}
-            className={`rounded-xl py-2 text-sm font-semibold transition ${
+            className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-semibold transition ${
               category === c.id ? 'bg-ink text-bg' : 'text-muted'
             }`}
           >
-            {c.icon} {c.label}
+            <c.icon aria-hidden size={16} />
+            {c.label}
           </button>
         ))}
       </div>
 
       <label className="flex items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 shadow-sm focus-within:border-brand">
-        <span aria-hidden>🔍</span>
+        <Search aria-hidden size={18} className="shrink-0 text-muted" />
         <input
           type="search"
           value={text}
@@ -143,7 +145,13 @@ export function ShopAround({ shop, has, onToggle }: Props) {
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: r.color }} />
                   {r.name}
                 </span>
-                <span className="text-xs text-muted">{r.note ?? 'Open search ↗'}</span>
+                <span className="flex items-center gap-1 text-xs text-muted">
+                  {r.note ?? (
+                    <>
+                      Open search <ExternalLink aria-hidden size={12} />
+                    </>
+                  )}
+                </span>
               </a>
             )
           })}
