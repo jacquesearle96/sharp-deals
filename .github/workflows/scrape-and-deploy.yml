@@ -4,7 +4,8 @@ name: Scrape and deploy
 # Latest data (and the price history) lives on a single-commit "data" branch so the repo does not grow.
 on:
   schedule:
-    - cron: '0 */6 * * *' # every 6 hours (UTC)
+    # Minute 23, not 0: GitHub delays or drops scheduled runs most often at the top of the hour.
+    - cron: '23 */6 * * *' # every 6 hours (UTC), at 00:23, 06:23, 12:23 and 18:23
   # Pushing a tag named scrape-<stores> also starts a run, e.g. scrape-pnp-spar, scrape-grocery or scrape-all.
   push:
     tags: ['scrape-*']
