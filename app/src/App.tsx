@@ -1,7 +1,7 @@
 import { Plus, Sparkles, Trash2 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { DealProduct, StoreId } from '../../shared/types.ts'
-import { BottomNav, type Tab } from './components/BottomNav.tsx'
+import { BottomNav, TopNav, type Tab } from './components/BottomNav.tsx'
 import { DealCard } from './components/DealCard.tsx'
 import { DealList } from './components/DealList.tsx'
 import { FilterBar } from './components/FilterBar.tsx'
@@ -36,14 +36,15 @@ export default function App() {
   const topResults = useMemo(() => (mini ? queryDeals(products, mini, top) : []), [products, mini, top])
 
   return (
-    <div className="mx-auto min-h-screen max-w-2xl pb-28">
-      <header className="safe-top sticky top-0 z-10 bg-bg/90 px-4 pb-3 pt-4 backdrop-blur">
-        <div className="flex items-end justify-between">
-          <h1 className="text-2xl font-black tracking-tight">
+    <div className="mx-auto min-h-screen max-w-2xl pb-28 lg:max-w-7xl lg:pb-12">
+      <header className="safe-top sticky top-0 z-10 bg-bg/90 px-4 pb-3 pt-4 backdrop-blur lg:px-8 lg:py-4">
+        <div className="flex items-end justify-between gap-6 lg:items-center">
+          <h1 className="text-2xl font-black tracking-tight lg:text-3xl">
             Sharp <span className="bg-gradient-to-r from-brand to-brand2 bg-clip-text text-transparent">Deals</span>
           </h1>
+          <TopNav tab={tab} onChange={setTab} listCount={list.items.length} />
           {state.status === 'ready' && (
-            <p className="text-xs text-muted">Updated {ago(state.index.generatedAt)}</p>
+            <p className="text-xs text-muted lg:text-sm">Updated {ago(state.index.generatedAt)}</p>
           )}
         </div>
         {updated && (
@@ -54,7 +55,7 @@ export default function App() {
         )}
       </header>
 
-      <main className="space-y-4 px-4">
+      <main className="space-y-4 px-4 lg:space-y-6 lg:px-8">
         {state.status === 'loading' && <p className="py-16 text-center text-muted">Loading deals…</p>}
         {state.status === 'error' && (
           <p className="rounded-2xl border border-line bg-surface p-6 text-center">
@@ -63,23 +64,27 @@ export default function App() {
         )}
 
         {state.status === 'ready' && tab === 'search' && (
-          <>
-            <FilterBar filters={search} onChange={setSearch} counts={counts} />
+          <WithSidebar sidebar={<FilterBar filters={search} onChange={setSearch} counts={counts} />}>
             <DealList
               deals={searchResults}
               has={list.has}
               onToggle={list.toggle}
               empty={search.text ? `No deals found for “${search.text}”.` : 'No deals match these filters.'}
             />
-          </>
+          </WithSidebar>
         )}
 
         {state.status === 'ready' && tab === 'deals' && (
-          <>
-            <p className="text-sm text-muted">The best multi-buy deals right now, biggest saving first.</p>
-            <FilterBar filters={top} onChange={setTop} counts={counts} hideSearch />
+          <WithSidebar
+            sidebar={
+              <>
+                <p className="text-sm text-muted">The best multi-buy deals right now, biggest saving first.</p>
+                <FilterBar filters={top} onChange={setTop} counts={counts} hideSearch />
+              </>
+            }
+          >
             <DealList deals={topResults} has={list.has} onToggle={list.toggle} empty="No multi-buy deals match these filters." />
-          </>
+          </WithSidebar>
         )}
 
         {tab === 'shop' && <ShopAround shop={shop.state} has={list.has} onToggle={list.toggle} />}
@@ -90,6 +95,16 @@ export default function App() {
       </main>
 
       <BottomNav tab={tab} onChange={setTab} listCount={list.items.length} />
+    </div>
+  )
+}
+
+/** On wide screens the filters sit in a sticky column beside the results; on a phone they stack above them. */
+function WithSidebar({ sidebar, children }: { sidebar: ReactNode; children: ReactNode }) {
+  return (
+    <div className="space-y-4 lg:grid lg:grid-cols-[18rem_minmax(0,1fr)] lg:items-start lg:gap-8 lg:space-y-0">
+      <aside className="space-y-4 lg:sticky lg:top-24">{sidebar}</aside>
+      <div className="min-w-0">{children}</div>
     </div>
   )
 }
@@ -112,8 +127,8 @@ function ListScreen({ list }: { list: ReturnType<typeof useShoppingList> }) {
 
   if (list.items.length === 0) {
     return (
-      <div className="space-y-4">
-        <p className="rounded-2xl border border-dashed border-line p-8 text-center text-muted">
+      <div className="mx-auto max-w-2xl space-y-4">
+        <p className="rounded-2xl border border-dashed border-line p-8 text-center text-muted lg:p-16">
           Your list is empty. Tap <Plus aria-label="plus" size={16} className="inline align-[-3px]" strokeWidth={2.5} /> on any deal to add it.
         </p>
         {share}
@@ -122,7 +137,8 @@ function ListScreen({ list }: { list: ReturnType<typeof useShoppingList> }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8 lg:space-y-0">
+      <aside className="space-y-4 lg:sticky lg:top-24 lg:order-2">
       <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-brand to-brand2 p-4 text-white">
         <div>
           <p className="text-sm opacity-90">{list.items.length} {list.items.length === 1 ? 'item' : 'items'}</p>
@@ -134,14 +150,19 @@ function ListScreen({ list }: { list: ReturnType<typeof useShoppingList> }) {
         </button>
       </div>
       {share}
-      {[...byStore.entries()].map(([store, items]) => (
-        <section key={store} className="space-y-3">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-muted">{STORE_INFO[store].name}</h2>
-          {items.map((d) => (
-            <DealCard key={`${d.store}:${d.id}`} deal={d} inList onToggle={list.toggle} />
-          ))}
-        </section>
-      ))}
+      </aside>
+      <div className="space-y-6 lg:order-1">
+        {[...byStore.entries()].map(([store, items]) => (
+          <section key={store} className="space-y-3">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-muted">{STORE_INFO[store].name}</h2>
+            <div className="grid items-start gap-3 xl:grid-cols-2">
+              {items.map((d) => (
+                <DealCard key={`${d.store}:${d.id}`} deal={d} inList onToggle={list.toggle} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   )
 }

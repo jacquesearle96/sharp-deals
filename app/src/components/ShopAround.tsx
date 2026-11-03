@@ -69,15 +69,15 @@ export function ShopAround({ shop, has, onToggle }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl bg-gradient-to-r from-brand to-brand2 p-4 text-white">
+      <div className="rounded-2xl bg-gradient-to-r from-brand to-brand2 p-4 text-white lg:p-8">
         <p className="text-sm font-semibold opacity-90">Black Friday · 27 Nov</p>
-        <p className="text-2xl font-extrabold">
+        <p className="text-2xl font-extrabold lg:text-4xl">
           {days > 0 ? `${days} days to go` : days === 0 ? 'It’s today!' : 'Sale season is on'}
         </p>
         <p className="mt-1 text-sm opacity-90">Search once, then open the same search in every shop.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-surface p-1">
+      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-line bg-surface p-1 lg:max-w-md">
         {CATEGORIES.map((c) => (
           <button
             key={c.id}
@@ -109,7 +109,7 @@ export function ShopAround({ shop, has, onToggle }: Props) {
         />
       </label>
 
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
         {[...recent, ...IDEAS[category].filter((i) => !recent.includes(i))].map((idea) => (
           <button
             key={idea}
@@ -126,7 +126,7 @@ export function ShopAround({ shop, has, onToggle }: Props) {
         <h2 className="text-sm font-bold uppercase tracking-wide text-muted">
           {query ? `Search “${query}” in` : 'Pick a search above, then open it in'}
         </h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           {retailersFor(category).map((r) => {
             const disabled = !query
             return (
@@ -137,7 +137,7 @@ export function ShopAround({ shop, has, onToggle }: Props) {
                 rel="noopener noreferrer"
                 onClick={remember}
                 aria-disabled={disabled}
-                className={`flex flex-col gap-1 rounded-2xl border border-line bg-surface p-3 shadow-sm transition active:scale-[0.98] ${
+                className={`flex flex-col gap-1 rounded-2xl border border-line bg-surface p-3 shadow-sm transition hover:border-muted/50 hover:shadow-md active:scale-[0.98] ${
                   disabled ? 'pointer-events-none opacity-50' : ''
                 }`}
               >

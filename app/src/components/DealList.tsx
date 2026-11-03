@@ -23,8 +23,8 @@ export function DealList({ deals, has, onToggle, empty }: Props) {
   }
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted">
+    <div className="grid items-start gap-3 lg:grid-cols-2">
+      <p className="col-span-full text-sm text-muted">
         {deals.length.toLocaleString('en-ZA')} deal{deals.length === 1 ? '' : 's'}
       </p>
       {deals.slice(0, shown).map((d) => (
@@ -34,7 +34,7 @@ export function DealList({ deals, has, onToggle, empty }: Props) {
         <button
           type="button"
           onClick={() => setShown((n) => n + PAGE)}
-          className="w-full rounded-2xl border border-line bg-surface py-3 text-sm font-semibold active:scale-[0.99]"
+          className="col-span-full w-full rounded-2xl border border-line bg-surface py-3 text-sm font-semibold transition hover:border-muted active:scale-[0.99] lg:mx-auto lg:max-w-sm"
         >
           Show more ({deals.length - shown} left)
         </button>

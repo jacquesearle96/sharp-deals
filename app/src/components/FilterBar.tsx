@@ -38,14 +38,14 @@ export function FilterBar({ filters, onChange, counts, hideSearch, stores = DEAL
             type="search"
             value={filters.text}
             onChange={(e) => onChange({ ...filters, text: e.target.value })}
-            placeholder="Search nappies, coffee, chocolate…"
+            placeholder="Search nappies, coffee…"
             enterKeyHint="search"
             className="w-full bg-transparent text-base outline-none placeholder:text-muted"
           />
         </label>
       )}
 
-      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+      <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
         {stores.map((id) => {
           const on = filters.stores.includes(id)
           return (
@@ -66,7 +66,7 @@ export function FilterBar({ filters, onChange, counts, hideSearch, stores = DEAL
         })}
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         {showOnSale ? (
           <button
             type="button"

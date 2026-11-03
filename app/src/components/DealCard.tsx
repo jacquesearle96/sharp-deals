@@ -27,7 +27,7 @@ export function DealCard({ deal, inList, onToggle }: Props) {
   const notes = verdicts(deal)
 
   return (
-    <article className="rounded-2xl border border-line bg-surface p-3 shadow-sm">
+    <article className="rounded-2xl border border-line bg-surface p-3 shadow-sm transition hover:border-muted/50 hover:shadow-md">
       <div className="flex gap-3">
         <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-white">
           {deal.image ? (
