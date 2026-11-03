@@ -1,9 +1,10 @@
-import { Check, ChartLine, ChevronDown, CircleCheck, Plus, ShoppingCart, TriangleAlert } from 'lucide-react'
+import { Check, ChartLine, ExternalLink, ChevronDown, CircleCheck, Plus, ShoppingCart, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { isMultiBuy, promoLabel } from '../../../shared/promo.ts'
 import type { DealProduct } from '../../../shared/types.ts'
 import { endsLabel, money, startsLabel } from '../lib/format.ts'
 import { STORE_INFO } from '../lib/stores.ts'
+import { safeLink } from '../lib/link.ts'
 import { verdicts } from '../lib/verdict.ts'
 import { PriceHistory } from './PriceHistory.tsx'
 
@@ -25,6 +26,9 @@ export function DealCard({ deal, inList, onToggle }: Props) {
   const reference = deal.wasPrice ?? deal.price
   const showEach = multi && deal.effectivePrice < deal.price
   const notes = verdicts(deal)
+  const link = safeLink(deal.url)
+  // Leaflet stores link to the catalogue site the deal came from, not the store's own shop.
+  const linkSite = link && new URL(link).hostname.includes('cataloguespecials') ? 'the leaflet' : `the ${store.name} website`
 
   return (
     <article className="rounded-2xl border border-line bg-surface p-3 shadow-sm transition hover:border-muted/50 hover:shadow-md">
@@ -52,7 +56,22 @@ export function DealCard({ deal, inList, onToggle }: Props) {
             {!upcoming && ends && <span>· {ends}</span>}
           </div>
 
-          <h3 className="mt-0.5 line-clamp-2 text-[15px] font-semibold leading-snug">{deal.name}</h3>
+          <h3 className="mt-0.5 line-clamp-2 text-[15px] font-semibold leading-snug">
+            {link ? (
+              <a
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`Open on ${linkSite}`}
+                className="decoration-muted/60 underline-offset-2 hover:underline"
+              >
+                {deal.name}
+                <ExternalLink aria-label={`(opens ${linkSite})`} size={13} className="ml-1 inline align-[-1px] text-muted" />
+              </a>
+            ) : (
+              deal.name
+            )}
+          </h3>
 
           <div className="mt-auto flex items-end justify-between gap-2 pt-2">
             <div className="min-w-0">
