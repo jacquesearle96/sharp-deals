@@ -1,0 +1,72 @@
+[
+ {
+  "store": "pnp",
+  "ok": true,
+  "count": 10848,
+  "at": "2026-11-07T13:18:29.553Z",
+  "notes": []
+ },
+ {
+  "store": "checkers",
+  "ok": true,
+  "count": 1229,
+  "at": "2026-11-07T13:23:55.240Z",
+  "notes": [
+   "found 1223; kept 6 unexpired items from the last run"
+  ]
+ },
+ {
+  "store": "woolworths",
+  "ok": true,
+  "count": 3041,
+  "at": "2026-11-07T13:25:24.881Z",
+  "notes": []
+ },
+ {
+  "store": "foodlovers",
+  "ok": true,
+  "count": 122,
+  "at": "2026-11-07T13:38:23.782Z",
+  "notes": [
+   "found 111; kept 11 unexpired items from the last run"
+  ]
+ },
+ {
+  "store": "spar",
+  "ok": true,
+  "count": 10,
+  "at": "2026-11-07T13:46:52.354Z",
+  "notes": []
+ },
+ {
+  "store": "clicks",
+  "ok": true,
+  "count": 1103,
+  "at": "2026-11-07T13:38:33.591Z",
+  "notes": []
+ },
+ {
+  "store": "dischem",
+  "ok": true,
+  "count": 354,
+  "at": "2026-10-31T05:05:47.087Z",
+  "notes": [
+   "no products on https://www.dischem.co.za/on-promotion: title \"Just a moment...\" at https://www.dischem.co.za/on-promotion?p=1; text: www.dischem.co.za Performing security verification This website uses a security service to protect against malicious bot"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "babycity",
+  "ok": true,
+  "count": 2933,
+  "at": "2026-11-07T13:47:00.744Z",
+  "notes": []
+ },
+ {
+  "store": "babiesrus",
+  "ok": true,
+  "count": 2070,
+  "at": "2026-11-07T13:55:30.696Z",
+  "notes": []
+ }
+]
