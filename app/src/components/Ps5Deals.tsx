@@ -1,8 +1,9 @@
-import { ExternalLink, Trophy } from 'lucide-react'
+import { ExternalLink, KeyRound, RefreshCw, Trophy } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { modelOf, PS5_STORES, sortOffers, type Ps5Feed, type Ps5Model, type Ps5Offer } from '../../../shared/ps5.ts'
 import { ago, money } from '../lib/format.ts'
 import { safeLink } from '../lib/link.ts'
+import { actionsPage, currentRepo, describeRun, isActive, latestRun, loadToken, newTokenPage, saveToken, startRun, type Run } from '../lib/ps5Refresh.ts'
 import { daysToBlackFriday } from '../lib/retailers.ts'
 
 /**
@@ -23,32 +24,30 @@ type Load = { status: 'loading' } | { status: 'error'; message: string } | { sta
 
 function usePs5Feed() {
   const [state, setState] = useState<Load>({ status: 'loading' })
-  const refresh = useCallback(async () => {
+  /** Loads ps5.json from the network (the service worker leaves this file alone) and returns its generatedAt. */
+  const reload = useCallback(async (): Promise<string | undefined> => {
     try {
-      const r = await fetch(`${import.meta.env.BASE_URL}data/ps5.json`)
+      const r = await fetch(`${import.meta.env.BASE_URL}data/ps5.json`, { cache: 'no-store' })
       if (!r.ok) throw new Error(r.status === 404 ? 'No PS5 prices yet: the first run has not finished.' : `Could not load (${r.status})`)
       const feed = (await r.json()) as Ps5Feed
       setState((cur) => (cur.status === 'ready' && cur.feed.generatedAt === feed.generatedAt ? cur : { status: 'ready', feed }))
+      return feed.generatedAt
     } catch (e) {
       setState((cur) => (cur.status === 'ready' ? cur : { status: 'error', message: (e as Error).message }))
+      return undefined
     }
   }, [])
   useEffect(() => {
-    void refresh()
-    // The service worker answers from its saved copy first; asking again shortly after picks up newer data.
-    const timer = setTimeout(() => void refresh(), 4000)
-    const onVisible = () => document.visibilityState === 'visible' && void refresh()
+    void reload()
+    const onVisible = () => document.visibilityState === 'visible' && void reload()
     document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      clearTimeout(timer)
-      document.removeEventListener('visibilitychange', onVisible)
-    }
-  }, [refresh])
-  return state
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [reload])
+  return { state, reload }
 }
 
 export function Ps5Deals() {
-  const state = usePs5Feed()
+  const { state, reload } = usePs5Feed()
   const [model, setModel] = useState<Model>('all')
   const [showOutOfStock, setShowOutOfStock] = useState(false)
   const days = daysToBlackFriday()
@@ -61,7 +60,13 @@ export function Ps5Deals() {
   }, [state, model, showOutOfStock])
 
   if (state.status === 'loading') return <p className="py-16 text-center text-muted">Loading PS5 prices…</p>
-  if (state.status === 'error') return <p className="rounded-2xl border border-line bg-surface p-6 text-center">{state.message}</p>
+  if (state.status === 'error')
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        <p className="rounded-2xl border border-line bg-surface p-6 text-center">{state.message}</p>
+        <RefreshPanel reload={reload} />
+      </div>
+    )
 
   const { feed } = state
   const hiddenOutOfStock = feed.offers.filter((o) => o.inStock === false).length
@@ -76,6 +81,8 @@ export function Ps5Deals() {
           {Object.keys(PS5_STORES).length} stores, checked every hour · updated {ago(feed.generatedAt)}
         </p>
       </section>
+
+      <RefreshPanel reload={reload} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-1 rounded-full border border-line bg-surface p-1" role="group" aria-label="Model">
@@ -171,5 +178,180 @@ function OfferRow({ offer: o, rank }: { offer: Ps5Offer; rank: number }) {
         )}
       </div>
     </li>
+  )
+}
+
+const POLL_MS = 20_000
+const GIVE_UP_MS = 30 * 60_000
+/** How long to wait for the site to serve new prices after the run has finished */
+const SETTLE_MS = 4 * 60_000
+
+type Refresh =
+  | { phase: 'idle'; note?: string }
+  | { phase: 'running'; run?: Run; since: number; before?: string; doneAt?: number }
+  | { phase: 'setup' }
+  | { phase: 'error'; message: string }
+
+/**
+ * Refresh reloads the latest prices at once. With a GitHub token saved on this device it also starts a fresh
+ * check of every store (the ps5.yml workflow) and follows it until the new prices are published.
+ */
+function RefreshPanel({ reload }: { reload: () => Promise<string | undefined> }) {
+  const repo = useMemo(() => currentRepo(), [])
+  const [token, setToken] = useState(loadToken)
+  const [draft, setDraft] = useState('')
+  const [refresh, setRefresh] = useState<Refresh>({ phase: 'idle' })
+  const running = refresh.phase === 'running'
+
+  // A run that is already going (the hourly one, or one started earlier) is followed too.
+  useEffect(() => {
+    if (!repo || !token) return
+    let cancelled = false
+    latestRun(repo, token)
+      .then((run) => !cancelled && isActive(run) && setRefresh({ phase: 'running', run, since: Date.now() }))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [repo, token])
+
+  // While a run is going: check on it every 20 seconds; once it has finished, load prices until they change.
+  useEffect(() => {
+    if (refresh.phase !== 'running' || !repo || !token) return
+    const timer = setTimeout(async () => {
+      try {
+        if (Date.now() - refresh.since > GIVE_UP_MS) {
+          setRefresh({ phase: 'error', message: 'This is taking longer than usual. Check the run on GitHub.' })
+          return
+        }
+        const run = await latestRun(repo, token)
+        if (run?.status === 'completed' && (!refresh.run || run.id === refresh.run.id)) {
+          if (run.conclusion !== 'success' && run.conclusion !== 'failure') {
+            setRefresh({ phase: 'error', message: describeRun(run) })
+            return
+          }
+          // The site can take a minute or two to serve the newly published file.
+          const now = await reload()
+          if (now && now !== refresh.before) {
+            setRefresh({ phase: 'idle', note: 'Prices updated just now.' })
+            return
+          }
+          const doneAt = refresh.doneAt ?? Date.now()
+          if (Date.now() - doneAt > SETTLE_MS) {
+            setRefresh({ phase: 'idle', note: 'The check finished, but the published prices have not changed yet. Try Refresh again shortly.' })
+            return
+          }
+          setRefresh({ ...refresh, run, doneAt })
+          return
+        }
+        setRefresh({ ...refresh, run: run ?? refresh.run })
+      } catch (e) {
+        setRefresh({ phase: 'error', message: (e as Error).message })
+      }
+    }, POLL_MS)
+    return () => clearTimeout(timer)
+  }, [refresh, repo, token, reload])
+
+  const onRefresh = async () => {
+    const before = await reload()
+    if (!repo) {
+      setRefresh({ phase: 'idle', note: 'Reloaded the latest prices.' })
+      return
+    }
+    if (!token) {
+      setRefresh({ phase: 'setup' })
+      return
+    }
+    setRefresh({ phase: 'running', since: Date.now(), before })
+    try {
+      const run = await startRun(repo, token)
+      setRefresh({ phase: 'running', run, since: Date.now(), before })
+    } catch (e) {
+      setRefresh({ phase: 'error', message: (e as Error).message })
+    }
+  }
+
+  const onSaveToken = () => {
+    const t = draft.trim()
+    if (!t) return
+    saveToken(t)
+    setToken(t)
+    setDraft('')
+    setRefresh({ phase: 'idle', note: 'Token saved on this device. Tap Refresh to check every store now.' })
+  }
+
+  const onForget = () => {
+    saveToken(null)
+    setToken(null)
+    setRefresh({ phase: 'idle', note: 'Token removed from this device.' })
+  }
+
+  return (
+    <section className="space-y-3 rounded-2xl border border-line bg-surface p-3 text-sm">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={running}
+          className="flex shrink-0 items-center gap-2 rounded-full bg-ink px-4 py-2 font-semibold text-bg disabled:opacity-60"
+        >
+          <RefreshCw aria-hidden size={16} className={running ? 'animate-spin' : ''} />
+          {running ? 'Checking…' : 'Refresh'}
+        </button>
+        <p className="min-w-0 text-muted" role="status">
+          {refresh.phase === 'running' && describeRun(refresh.run)}
+          {refresh.phase === 'error' && <span className="text-brand">{refresh.message}</span>}
+          {refresh.phase === 'idle' &&
+            (refresh.note ?? (token && repo ? 'Checks every store now and loads the new prices.' : 'Loads the latest prices.'))}
+          {refresh.phase === 'setup' && 'To check every store from here, add a GitHub token on this device.'}
+        </p>
+      </div>
+
+      {repo && running && refresh.run && (
+        <a href={refresh.run.html_url} target="_blank" rel="noopener noreferrer" className="inline-block text-info underline-offset-2 hover:underline">
+          Follow the run on GitHub
+        </a>
+      )}
+
+      {repo && refresh.phase === 'setup' && (
+        <div className="space-y-2 rounded-xl bg-bg p-3">
+          <p>
+            Create a{' '}
+            <a href={newTokenPage} target="_blank" rel="noopener noreferrer" className="text-info underline">
+              fine-grained GitHub token
+            </a>{' '}
+            with <b>Only select repositories: {repo.name}</b> and the permission <b>Actions: Read and write</b>, then paste it here.
+            It stays on this device only and can do nothing but run this repository’s workflows.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder="github_pat_…"
+              autoComplete="off"
+              className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2"
+            />
+            <button type="button" onClick={onSaveToken} className="rounded-lg bg-ink px-3 py-2 font-semibold text-bg">
+              Save
+            </button>
+          </div>
+          <p className="text-muted">
+            Or start it on GitHub instead:{' '}
+            <a href={actionsPage(repo)} target="_blank" rel="noopener noreferrer" className="text-info underline">
+              Run workflow
+            </a>
+            .
+          </p>
+        </div>
+      )}
+
+      {repo && token && !running && (
+        <button type="button" onClick={onForget} className="flex items-center gap-1.5 text-xs text-muted hover:text-ink">
+          <KeyRound aria-hidden size={13} />
+          Remove the GitHub token from this device
+        </button>
+      )}
+    </section>
   )
 }

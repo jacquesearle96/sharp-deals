@@ -31,7 +31,8 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Deal data changes often: show the cached copy instantly, refresh in the background.
-            urlPattern: ({ url }) => url.pathname.includes('/data/'),
+            // ps5.json (temporary) is left to the network so its Refresh button always shows the newest prices.
+            urlPattern: ({ url }) => url.pathname.includes('/data/') && !url.pathname.endsWith('/ps5.json'),
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'deal-data' },
           },
