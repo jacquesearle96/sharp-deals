@@ -44,6 +44,21 @@ git tag scrape-all && git push origin scrape-all        # everything
 git push origin :refs/tags/scrape-all                   # delete the tag afterwards so the name can be reused
 ```
 
+## PS5 tab (temporary, Black Friday 2026)
+
+The **PS5** tab lists every PlayStation 5 console from Takealot, Amazon.co.za, Game, Makro, Incredible, HiFi Corp,
+BT Games, Loot, House & Home, OK Furniture and Computer Mania, cheapest first. The `ps5.yml` workflow refreshes it
+every hour during November only. To refresh on demand, tap **Refresh** on the PS5 tab: it reloads the latest prices,
+and once you save a GitHub token on that device it also starts a fresh check of every store (about 5 minutes). Use a
+[fine-grained token](https://github.com/settings/personal-access-tokens/new) limited to this repository with only
+**Actions: Read and write**; it is kept in that browser only, never in the site. Without a token,
+**Actions > PS5 prices > Run workflow** does the same. Checkers is not
+included: its site blocks automated requests. To run it locally: `cd scraper && node src/ps5/run.ts [store ...]`.
+
+To remove it afterwards, delete `shared/ps5.ts`, `shared/ps5.test.ts`, `scraper/src/ps5/`,
+`app/src/components/Ps5Deals.tsx` and `.github/workflows/ps5.yml`, then remove the lines marked `TEMPORARY` in
+`app/src/App.tsx`, `app/src/components/BottomNav.tsx` and the `ps5.json` exception in `scrape-and-deploy.yml`.
+
 ## Installing on an iPhone
 
 Open the Pages address in **Safari**, tap **Share**, then **Add to Home Screen**.

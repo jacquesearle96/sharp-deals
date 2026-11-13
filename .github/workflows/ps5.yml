@@ -1,0 +1,96 @@
+name: PS5 prices (temporary)
+
+# TEMPORARY (Black Friday 2026): checks PS5 console prices every hour and redeploys the app.
+# The schedule only fires in November, so it stops by itself after Cyber Monday. Delete this file afterwards.
+on:
+  schedule:
+    - cron: '47 * * 11 *' # every hour at minute 47, November only (the main scrape runs at minute 23)
+  workflow_dispatch:
+
+permissions:
+  contents: write # push the data branch
+  pages: write
+  id-token: write
+
+# Same group as the main scrape, so the two never write the data branch or deploy at the same time.
+concurrency:
+  group: scrape-and-deploy
+  cancel-in-progress: false
+
+jobs:
+  ps5-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            scraper/package-lock.json
+
+      - name: Restore the latest data
+        run: |
+          mkdir -p app/public/data
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git fetch --depth=1 origin data
+            git archive FETCH_HEAD | tar -x -C app/public/data
+          fi
+
+      - name: Install scraper and browser
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+        working-directory: scraper
+
+      - name: Check PS5 prices
+        id: ps5
+        # A store that fails keeps its last prices, so carry on and publish the rest.
+        continue-on-error: true
+        run: node src/ps5/run.ts
+        working-directory: scraper
+
+      - name: Save the data branch
+        run: |
+          cd app/public/data
+          git init -q -b data
+          git config user.name "sharp-deals-bot"
+          git config user.email "sharp-deals-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Data $(date -u +'%Y-%m-%d %H:%M') UTC (PS5)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data
+
+      - name: Build the app
+        run: |
+          npm ci
+          npm run build
+        working-directory: app
+        env:
+          BASE: /${{ github.event.repository.name }}/
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Drop the raw per-store files from the site
+        run: find . -maxdepth 1 -name '*.json' ! -name index.json ! -name shop-index.json ! -name runs.json ! -name ps5.json -print -delete
+        working-directory: app/dist/data
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+      - name: Report PS5 problems
+        if: steps.ps5.outcome == 'failure'
+        run: echo "::warning::At least one store failed. The PS5 page shows its last prices. See the Check PS5 prices step."
+
+  deploy:
+    needs: ps5-build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

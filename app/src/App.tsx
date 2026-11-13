@@ -6,6 +6,7 @@ import { DealCard } from './components/DealCard.tsx'
 import { DealList } from './components/DealList.tsx'
 import { FilterBar } from './components/FilterBar.tsx'
 import { ShareList } from './components/ShareList.tsx'
+import { Ps5Deals } from './components/Ps5Deals.tsx'
 import { ShopAround } from './components/ShopAround.tsx'
 import { useDeals, useShopIndex } from './lib/data.ts'
 import { ago, money } from './lib/format.ts'
@@ -56,8 +57,8 @@ export default function App() {
       </header>
 
       <main className="space-y-4 px-4 lg:space-y-6 lg:px-8">
-        {state.status === 'loading' && <p className="py-16 text-center text-muted">Loading deals…</p>}
-        {state.status === 'error' && (
+        {state.status === 'loading' && tab !== 'ps5' && <p className="py-16 text-center text-muted">Loading deals…</p>}
+        {state.status === 'error' && tab !== 'ps5' && (
           <p className="rounded-2xl border border-line bg-surface p-6 text-center">
             Couldn’t load deals. {state.message}
           </p>
@@ -89,9 +90,12 @@ export default function App() {
 
         {tab === 'shop' && <ShopAround shop={shop.state} has={list.has} onToggle={list.toggle} />}
 
+        {/* TEMPORARY (Black Friday 2026) */}
+        {tab === 'ps5' && <Ps5Deals />}
+
         {state.status === 'ready' && tab === 'list' && <ListScreen list={list} />}
 
-        {state.status === 'ready' && tab !== 'shop' && <StoreStatus runs={state.index.runs} />}
+        {state.status === 'ready' && tab !== 'shop' && tab !== 'ps5' && <StoreStatus runs={state.index.runs} />}
       </main>
 
       <BottomNav tab={tab} onChange={setTab} listCount={list.items.length} />

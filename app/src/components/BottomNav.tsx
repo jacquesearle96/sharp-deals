@@ -1,11 +1,13 @@
-import { Flame, Search, ShoppingBag, ShoppingBasket, type LucideIcon } from 'lucide-react'
+import { Flame, Gamepad2, Search, ShoppingBag, ShoppingBasket, type LucideIcon } from 'lucide-react'
 
-export type Tab = 'search' | 'deals' | 'shop' | 'list'
+export type Tab = 'search' | 'deals' | 'shop' | 'ps5' | 'list'
 
 const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: 'search', label: 'Deals', icon: Search },
   { id: 'deals', label: 'Top deals', icon: Flame },
   { id: 'shop', label: 'Shop around', icon: ShoppingBag },
+  // TEMPORARY (Black Friday 2026)
+  { id: 'ps5', label: 'PS5', icon: Gamepad2 },
   { id: 'list', label: 'My list', icon: ShoppingBasket },
 ]
 
