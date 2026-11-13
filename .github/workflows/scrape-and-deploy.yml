@@ -115,8 +115,8 @@ jobs:
 
       - name: Drop the raw per-store files from the site
         if: github.ref_type != 'tag'
-        # The app only reads index.json, shop-index.json, runs.json and history/.
-        run: find . -maxdepth 1 -name '*.json' ! -name index.json ! -name shop-index.json ! -name runs.json -print -delete
+        # The app only reads index.json, shop-index.json, runs.json, history/ and (temporarily) ps5.json.
+        run: find . -maxdepth 1 -name '*.json' ! -name index.json ! -name shop-index.json ! -name runs.json ! -name ps5.json -print -delete
         working-directory: app/dist/data
 
       - uses: actions/upload-pages-artifact@v3
