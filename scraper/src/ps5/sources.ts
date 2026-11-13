@@ -84,7 +84,13 @@ export function parseAmazon(html: string): Listing[] {
     const price = rand(p.match(/<span class="a-price"[^>]*><span class="a-offscreen">([^<]*)</)?.[1] ?? p.match(/<span class="a-offscreen">([^<]*)</)?.[1]);
     const before = rand(p.match(/a-text-price"[^>]*><span class="a-offscreen">([^<]*)</)?.[1]);
     if (!name || !href || !price) continue;
-    out.push({ name: decode(name), price, wasPrice: was(price, before), url: `https://www.amazon.co.za${href}` });
+    out.push({
+      name: decode(name),
+      price,
+      wasPrice: was(price, before),
+      url: `https://www.amazon.co.za${href}`,
+      inStock: /temporarily out of stock|currently unavailable|no featured offers/i.test(p) ? false : undefined,
+    });
   }
   return out;
 }
