@@ -149,8 +149,19 @@ function OfferRow({ offer: o, rank }: { offer: Ps5Offer; rank: number }) {
     <li
       className={`flex items-center gap-3 rounded-2xl border bg-surface p-3 shadow-sm ${best ? 'border-ok' : 'border-line'} ${o.inStock === false ? 'opacity-60' : ''}`}
     >
-      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${best ? 'bg-ok text-white' : 'bg-bg text-muted'}`}>
-        {best ? <Trophy aria-label="Cheapest" size={16} /> : rank}
+      <span className="relative shrink-0">
+        <img
+          src={`${import.meta.env.BASE_URL}logos/${o.store}.${o.store === 'computermania' ? 'svg' : 'png'}`}
+          alt=""
+          width={44}
+          height={44}
+          className="h-11 w-11 rounded-xl border border-line bg-white object-contain p-1"
+        />
+        <span
+          className={`absolute -left-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold ring-2 ring-surface ${best ? 'bg-ok text-white' : 'bg-ink text-bg'}`}
+        >
+          {best ? <Trophy aria-label="Cheapest" size={11} /> : rank}
+        </span>
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
