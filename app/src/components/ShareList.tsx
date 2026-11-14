@@ -2,6 +2,7 @@ import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { SyncStatus } from '../lib/list.ts'
 import { formatCode, normalizeCode } from '../lib/sync.ts'
+import { Button, Group, Row } from './ui.tsx'
 
 interface Props {
   household: string | null
@@ -12,15 +13,15 @@ interface Props {
   onLeave: () => void
 }
 
-const STATUS_TEXT: Record<SyncStatus, string> = {
-  unconfigured: '',
-  off: '',
-  syncing: 'Connecting…',
-  ok: 'Up to date',
-  error: 'Can’t reach the shared list. Your changes are kept and will send when you’re back online.',
+const STATUS: Record<SyncStatus, { text: string; dot: string }> = {
+  unconfigured: { text: '', dot: '' },
+  off: { text: '', dot: '' },
+  syncing: { text: 'Connecting', dot: 'bg-faint' },
+  ok: { text: 'Up to date', dot: 'bg-ok' },
+  error: { text: 'Offline', dot: 'bg-warn' },
 }
 
-/** Lets two phones share one shopping list with a private code. */
+/** Lets two phones share one shopping list with a private code. Lives in Settings. */
 export function ShareList({ household, status, canShare, onStart, onJoin, onLeave }: Props) {
   const [entry, setEntry] = useState('')
   const [copied, setCopied] = useState(false)
@@ -28,10 +29,9 @@ export function ShareList({ household, status, canShare, onStart, onJoin, onLeav
 
   if (!canShare) {
     return (
-      <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted">
-        Sharing this list with your partner isn’t switched on yet. It needs a free Supabase project, set up once.
-        See <code>supabase/README.md</code>.
-      </p>
+      <Group title="Shared list">
+        <Row title="Not set up" detail="Sharing needs a free Supabase project, set up once. See supabase/README.md in the repository." />
+      </Group>
     )
   }
 
@@ -45,68 +45,79 @@ export function ShareList({ household, status, canShare, onStart, onJoin, onLeav
         // Clipboard blocked: the code is on screen to read out.
       }
     }
+    const s = STATUS[status]
     return (
-      <div className="rounded-2xl border border-line bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">Shared list</p>
-          <span className="flex items-center gap-1.5 text-xs text-muted">
-            <span className={`h-2 w-2 rounded-full ${status === 'ok' ? 'bg-ok' : status === 'error' ? 'bg-brand' : 'bg-brand2'}`} />
-            {status === 'ok' ? 'Up to date' : status === 'error' ? 'Offline' : 'Syncing'}
-          </span>
+      <Group
+        title="Shared list"
+        action={
+          s.text && (
+            <span className="flex items-center gap-1.5 pb-0.5 text-[13px] text-muted">
+              <span aria-hidden className={`h-2 w-2 rounded-full ${s.dot}`} />
+              {s.text}
+            </span>
+          )
+        }
+        footer={
+          status === 'error'
+            ? 'Can’t reach the shared list right now. Changes are kept on this phone and sent when you’re back online.'
+            : 'Anyone with this code sees and edits the same list. Treat it like a password.'
+        }
+      >
+        <div className="space-y-3 p-4">
+          <p className="text-[13px] text-muted">Enter this code on your partner’s phone</p>
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-xl bg-surface-2 px-3 py-2.5 text-center font-mono text-[17px] font-medium tracking-[0.15em]">
+              {formatCode(household)}
+            </code>
+            <Button onClick={copy} aria-label="Copy code">
+              {copied ? <Check aria-hidden size={16} /> : <Copy aria-hidden size={16} />}
+              {copied ? 'Copied' : 'Copy'}
+            </Button>
+          </div>
         </div>
-        <p className="mt-2 text-sm text-muted">Enter this code on your partner’s phone:</p>
-        <div className="mt-2 flex items-center gap-2">
-          <code className="flex-1 rounded-xl bg-bg px-3 py-2 text-center text-lg font-bold tracking-widest">{formatCode(household)}</code>
-          <button type="button" onClick={copy} className="flex items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-sm font-semibold">
-            {copied ? <Check aria-hidden size={16} /> : <Copy aria-hidden size={16} />}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-        </div>
-        {status === 'error' && <p className="mt-2 text-xs text-muted">{STATUS_TEXT.error}</p>}
-        <button type="button" onClick={onLeave} className="mt-3 text-xs font-semibold text-muted underline">
+        <button type="button" onClick={onLeave} className="flex min-h-12 w-full items-center px-4 text-left text-[15px] text-warn hover:bg-surface-2/60">
           Stop sharing on this phone
         </button>
-      </div>
+      </Group>
     )
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-line bg-surface p-4">
-      <p className="text-sm font-semibold">Share this list</p>
-      <button
-        type="button"
-        onClick={onStart}
-        className="w-full rounded-xl bg-gradient-to-r from-brand to-brand2 py-2.5 text-sm font-bold text-white active:scale-[0.99]"
-      >
-        Start a shared list
-      </button>
-      <form
-        className="flex gap-2"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (code) {
-            onJoin(code)
-            setEntry('')
-          }
-        }}
-      >
-        <input
-          value={entry}
-          onChange={(e) => setEntry(e.target.value)}
-          placeholder="Or enter your partner’s code"
-          autoCapitalize="characters"
-          autoCorrect="off"
-          spellCheck={false}
-          className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-brand"
-        />
-        <button
-          type="submit"
-          disabled={!code}
-          className="rounded-xl border border-line px-4 py-2 text-sm font-semibold disabled:opacity-40"
+    <Group title="Shared list" footer="Share one shopping list between two phones. Your current items are added to it.">
+      <div className="space-y-3 p-4">
+        <Button variant="primary" onClick={onStart} className="w-full">
+          Create a shared list
+        </Button>
+        <div className="flex items-center gap-3 text-xs text-faint">
+          <span className="h-px flex-1 bg-line" />
+          or join one
+          <span className="h-px flex-1 bg-line" />
+        </div>
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (code) {
+              onJoin(code)
+              setEntry('')
+            }
+          }}
         >
-          Join
-        </button>
-      </form>
-    </div>
+          <input
+            value={entry}
+            onChange={(e) => setEntry(e.target.value)}
+            placeholder="XXXX-XXXX-XXXX"
+            aria-label="Your partner’s code"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            className="h-10 min-w-0 flex-1 rounded-full bg-surface-2 px-4 font-mono text-[15px] tracking-wider outline-none placeholder:text-faint focus:ring-2 focus:ring-ink/20"
+          />
+          <Button type="submit" disabled={!code}>
+            Join
+          </Button>
+        </form>
+      </div>
+    </Group>
   )
 }

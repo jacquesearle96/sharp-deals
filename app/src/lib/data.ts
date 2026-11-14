@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DealIndex } from '../../../shared/types.ts'
 import { buildSearch } from './query.ts'
 
+/**
+ * Whether what is on screen has been confirmed against the published site: "checking" while the first look is
+ * the saved copy, "live" once a network check came back, "offline" when that check failed and the saved copy stays.
+ */
+export type Freshness = 'checking' | 'live' | 'offline'
+
 export type IndexState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; index: DealIndex }
 
 /**
@@ -20,6 +26,7 @@ export function useIndex(file: string, enabled = true) {
   const [state, setState] = useState<IndexState>({ status: 'loading' })
   // True for a few seconds after newer data replaced what was on screen.
   const [updated, setUpdated] = useState(false)
+  const [freshness, setFreshness] = useState<Freshness>('checking')
   const generation = useRef<string | null>(null)
 
   const refresh = useCallback(
@@ -28,6 +35,7 @@ export function useIndex(file: string, enabled = true) {
         const r = await fetch(`${import.meta.env.BASE_URL}data/${file}`)
         if (!r.ok) throw new Error(`Could not load ${file} (${r.status})`)
         const index = (await r.json()) as DealIndex
+        if (announce) setFreshness('live')
         if (index.generatedAt === generation.current) return
         const hadData = generation.current !== null
         generation.current = index.generatedAt
@@ -35,6 +43,7 @@ export function useIndex(file: string, enabled = true) {
         if (announce && hadData) setUpdated(true)
       } catch (e) {
         // A failed re-check must not replace data that is already showing.
+        if (announce) setFreshness('offline')
         if (generation.current === null) setState({ status: 'error', message: (e as Error).message })
       }
     },
@@ -60,7 +69,7 @@ export function useIndex(file: string, enabled = true) {
   }, [updated])
 
   const mini = useMemo(() => (state.status === 'ready' ? buildSearch(state.index.products) : null), [state])
-  return { state, mini, updated }
+  return { state, mini, updated, freshness }
 }
 
 /** The grocery and baby-shop specials behind the main tabs. */
