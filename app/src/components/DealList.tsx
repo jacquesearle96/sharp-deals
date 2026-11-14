@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { DealProduct } from '../../../shared/types.ts'
+import { SearchX } from 'lucide-react'
 import { DealCard } from './DealCard.tsx'
+import { Button, Empty } from './ui.tsx'
 
 const PAGE = 40
 
@@ -19,25 +21,21 @@ export function DealList({ deals, has, onToggle, empty }: Props) {
   useEffect(() => setShown(PAGE), [deals])
 
   if (deals.length === 0) {
-    return <p className="rounded-2xl border border-dashed border-line p-8 text-center text-muted">{empty}</p>
+    return <Empty icon={<SearchX size={22} />} title={empty} />
   }
 
   return (
     <div className="grid items-start gap-3 lg:grid-cols-2">
-      <p className="col-span-full text-sm text-muted">
+      <p className="col-span-full px-1 text-[13px] text-muted">
         {deals.length.toLocaleString('en-ZA')} deal{deals.length === 1 ? '' : 's'}
       </p>
       {deals.slice(0, shown).map((d) => (
         <DealCard key={`${d.store}:${d.id}`} deal={d} inList={has(d)} onToggle={onToggle} />
       ))}
       {shown < deals.length && (
-        <button
-          type="button"
-          onClick={() => setShown((n) => n + PAGE)}
-          className="col-span-full w-full rounded-2xl border border-line bg-surface py-3 text-sm font-semibold transition hover:border-muted active:scale-[0.99] lg:mx-auto lg:max-w-sm"
-        >
-          Show more ({deals.length - shown} left)
-        </button>
+        <Button onClick={() => setShown((n) => n + PAGE)} className="col-span-full mx-auto mt-2">
+          Show more · {(deals.length - shown).toLocaleString('en-ZA')} left
+        </Button>
       )}
     </div>
   )

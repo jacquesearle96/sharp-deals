@@ -2,38 +2,30 @@ import { Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { SyncStatus } from '../lib/list.ts'
 import { formatCode, normalizeCode } from '../lib/sync.ts'
+import { Button, cx } from './ui.tsx'
 
 interface Props {
   household: string | null
   status: SyncStatus
-  canShare: boolean
   onStart: () => void
   onJoin: (code: string) => void
   onLeave: () => void
 }
 
-const STATUS_TEXT: Record<SyncStatus, string> = {
-  unconfigured: '',
-  off: '',
-  syncing: 'Connecting…',
-  ok: 'Up to date',
-  error: 'Can’t reach the shared list. Your changes are kept and will send when you’re back online.',
+/** The one-line state of sharing, for the row in Settings. */
+export function shareSummary(household: string | null, status: SyncStatus, canShare: boolean): { text: string; tone: 'ok' | 'warn' | 'muted' } {
+  if (!canShare) return { text: 'Not set up', tone: 'muted' }
+  if (!household) return { text: 'Off', tone: 'muted' }
+  if (status === 'error') return { text: 'Offline', tone: 'warn' }
+  if (status === 'ok') return { text: 'On', tone: 'ok' }
+  return { text: 'Connecting', tone: 'muted' }
 }
 
-/** Lets two phones share one shopping list with a private code. */
-export function ShareList({ household, status, canShare, onStart, onJoin, onLeave }: Props) {
+/** Lets two phones share one shopping list with a private code. Shown in a sheet from Settings. */
+export function SharePanel({ household, status, onStart, onJoin, onLeave }: Props) {
   const [entry, setEntry] = useState('')
   const [copied, setCopied] = useState(false)
   const code = normalizeCode(entry)
-
-  if (!canShare) {
-    return (
-      <p className="rounded-2xl border border-dashed border-line p-4 text-sm text-muted">
-        Sharing this list with your partner isn’t switched on yet. It needs a free Supabase project, set up once.
-        See <code>supabase/README.md</code>.
-      </p>
-    )
-  }
 
   if (household) {
     const copy = async () => {
@@ -46,40 +38,44 @@ export function ShareList({ household, status, canShare, onStart, onJoin, onLeav
       }
     }
     return (
-      <div className="rounded-2xl border border-line bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold">Shared list</p>
-          <span className="flex items-center gap-1.5 text-xs text-muted">
-            <span className={`h-2 w-2 rounded-full ${status === 'ok' ? 'bg-ok' : status === 'error' ? 'bg-brand' : 'bg-brand2'}`} />
-            {status === 'ok' ? 'Up to date' : status === 'error' ? 'Offline' : 'Syncing'}
-          </span>
+      <div className="space-y-4">
+        <p className="text-[15px] text-muted">Enter this code on your partner’s phone. You’ll both see and edit the same list.</p>
+        <code className="block rounded-2xl bg-surface-2 px-3 py-4 text-center font-mono text-[22px] font-medium tracking-[0.18em]">
+          {formatCode(household)}
+        </code>
+        <Button variant="primary" onClick={copy} className="w-full">
+          {copied ? <Check aria-hidden size={16} /> : <Copy aria-hidden size={16} />}
+          {copied ? 'Copied' : 'Copy code'}
+        </Button>
+        <p className={cx('flex items-center justify-center gap-1.5 text-[13px]', status === 'error' ? 'text-warn' : 'text-muted')} role="status">
+          <span aria-hidden className={cx('h-2 w-2 rounded-full', status === 'ok' ? 'bg-ok' : status === 'error' ? 'bg-warn' : 'bg-faint')} />
+          {status === 'ok'
+            ? 'Up to date'
+            : status === 'error'
+              ? 'Can’t reach the shared list. Changes are kept and sent when you’re back online.'
+              : 'Connecting…'}
+        </p>
+        <div className="border-t border-line pt-4">
+          <p className="mb-3 text-[13px] text-muted">Treat the code like a password: anyone who has it can change your list.</p>
+          <Button variant="ghost" onClick={onLeave} className="-ml-2 text-warn hover:text-warn">
+            Stop sharing on this phone
+          </Button>
         </div>
-        <p className="mt-2 text-sm text-muted">Enter this code on your partner’s phone:</p>
-        <div className="mt-2 flex items-center gap-2">
-          <code className="flex-1 rounded-xl bg-bg px-3 py-2 text-center text-lg font-bold tracking-widest">{formatCode(household)}</code>
-          <button type="button" onClick={copy} className="flex items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-sm font-semibold">
-            {copied ? <Check aria-hidden size={16} /> : <Copy aria-hidden size={16} />}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-        </div>
-        {status === 'error' && <p className="mt-2 text-xs text-muted">{STATUS_TEXT.error}</p>}
-        <button type="button" onClick={onLeave} className="mt-3 text-xs font-semibold text-muted underline">
-          Stop sharing on this phone
-        </button>
       </div>
     )
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border border-line bg-surface p-4">
-      <p className="text-sm font-semibold">Share this list</p>
-      <button
-        type="button"
-        onClick={onStart}
-        className="w-full rounded-xl bg-gradient-to-r from-brand to-brand2 py-2.5 text-sm font-bold text-white active:scale-[0.99]"
-      >
-        Start a shared list
-      </button>
+    <div className="space-y-4">
+      <p className="text-[15px] text-muted">Share one shopping list between two phones. The items already on this phone are added to it.</p>
+      <Button variant="primary" onClick={onStart} className="w-full">
+        Create a shared list
+      </Button>
+      <div className="flex items-center gap-3 text-xs text-faint">
+        <span className="h-px flex-1 bg-line" />
+        or join your partner’s
+        <span className="h-px flex-1 bg-line" />
+      </div>
       <form
         className="flex gap-2"
         onSubmit={(e) => {
@@ -93,19 +89,16 @@ export function ShareList({ household, status, canShare, onStart, onJoin, onLeav
         <input
           value={entry}
           onChange={(e) => setEntry(e.target.value)}
-          placeholder="Or enter your partner’s code"
+          placeholder="XXXX-XXXX-XXXX"
+          aria-label="Your partner’s code"
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
-          className="min-w-0 flex-1 rounded-xl border border-line bg-bg px-3 py-2 text-sm outline-none focus:border-brand"
+          className="h-10 min-w-0 flex-1 rounded-full bg-surface-2 px-4 font-mono text-base tracking-wider outline-none placeholder:text-faint focus:ring-2 focus:ring-ink/20"
         />
-        <button
-          type="submit"
-          disabled={!code}
-          className="rounded-xl border border-line px-4 py-2 text-sm font-semibold disabled:opacity-40"
-        >
+        <Button type="submit" disabled={!code}>
           Join
-        </button>
+        </Button>
       </form>
     </div>
   )

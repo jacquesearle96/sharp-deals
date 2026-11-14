@@ -15,9 +15,9 @@ export default defineConfig({
       manifest: {
         name: 'Sharp Deals',
         short_name: 'Sharp Deals',
-        description: 'Every special from Checkers, Pick n Pay, Woolworths, Spar, Clicks and Dis-Chem in one place.',
-        theme_color: '#ff5a36',
-        background_color: '#f6f7fb',
+        description: 'Every special from South Africa’s grocery, pharmacy and baby stores in one place.',
+        theme_color: '#f5f1ea',
+        background_color: '#f5f1ea',
         display: 'standalone',
         start_url: '.',
         icons: [

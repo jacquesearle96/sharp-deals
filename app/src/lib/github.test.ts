@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeRun, isActive, repoFrom, type Run } from './ps5Refresh.ts'
+import { describeRun, isActive, repoFrom, type Run } from './github.ts'
 
 describe('repoFrom', () => {
   it('reads the repository from a GitHub Pages address', () => {
@@ -19,7 +19,8 @@ describe('run status', () => {
     expect(isActive(run('completed', 'success'))).toBe(false)
     expect(isActive(undefined)).toBe(false)
   })
-  it('explains a queued run behind the main scrape', () => {
-    expect(describeRun(run('queued'))).toMatch(/main deals scrape/)
+  it('explains a queued run waiting for the other scrape', () => {
+    expect(describeRun(run('queued'), 'ps5')).toMatch(/grocery scrape/)
+    expect(describeRun(run('queued'), 'grocery')).toMatch(/PS5 check/)
   })
 })

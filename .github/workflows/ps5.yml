@@ -52,6 +52,9 @@ jobs:
         continue-on-error: true
         run: node src/ps5/run.ts
         working-directory: scraper
+        env:
+          # Stores switched off in the app's Settings (a repository variable the app edits).
+          PS5_STORES_OFF: ${{ vars.PS5_STORES_OFF }}
 
       - name: Save the data branch
         run: |

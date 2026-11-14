@@ -1,14 +1,17 @@
-import { ExternalLink, KeyRound, RefreshCw, Trophy } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { modelOf, PS5_STORES, sortOffers, type Ps5Feed, type Ps5Model, type Ps5Offer } from '../../../shared/ps5.ts'
+import { Gamepad2, RefreshCw, Trophy } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { modelOf, PS5_STORES, sortOffers, type Ps5Model, type Ps5Offer } from '../../../shared/ps5.ts'
 import { ago, money } from '../lib/format.ts'
+import { describeRun, isActive, latestRun, startRun, useGithub, type Run } from '../lib/github.ts'
 import { safeLink } from '../lib/link.ts'
-import { actionsPage, currentRepo, describeRun, isActive, latestRun, loadToken, newTokenPage, saveToken, startRun, type Run } from '../lib/ps5Refresh.ts'
+import { usePs5Feed } from '../lib/ps5Feed.ts'
 import { daysToBlackFriday } from '../lib/retailers.ts'
+import { Button, Card, cx, Empty, Segmented } from './ui.tsx'
 
 /**
  * TEMPORARY (Black Friday 2026): every PS5 console listing from the SA stores we read, cheapest first.
- * Delete this file, its tab in BottomNav/App, shared/ps5.ts, scraper/src/ps5/ and .github/workflows/ps5.yml afterwards.
+ * Delete this file, its tab in BottomNav/App, lib/ps5Feed.ts, shared/ps5.ts, scraper/src/ps5/ and
+ * .github/workflows/ps5.yml afterwards.
  */
 
 type Model = 'all' | Ps5Model
@@ -20,33 +23,7 @@ const MODELS: { id: Model; label: string }[] = [
   { id: 'pro', label: 'Pro' },
 ]
 
-type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; feed: Ps5Feed }
-
-function usePs5Feed() {
-  const [state, setState] = useState<Load>({ status: 'loading' })
-  /** Loads ps5.json from the network (the service worker leaves this file alone) and returns its generatedAt. */
-  const reload = useCallback(async (): Promise<string | undefined> => {
-    try {
-      const r = await fetch(`${import.meta.env.BASE_URL}data/ps5.json`, { cache: 'no-store' })
-      if (!r.ok) throw new Error(r.status === 404 ? 'No PS5 prices yet: the first run has not finished.' : `Could not load (${r.status})`)
-      const feed = (await r.json()) as Ps5Feed
-      setState((cur) => (cur.status === 'ready' && cur.feed.generatedAt === feed.generatedAt ? cur : { status: 'ready', feed }))
-      return feed.generatedAt
-    } catch (e) {
-      setState((cur) => (cur.status === 'ready' ? cur : { status: 'error', message: (e as Error).message }))
-      return undefined
-    }
-  }, [])
-  useEffect(() => {
-    void reload()
-    const onVisible = () => document.visibilityState === 'visible' && void reload()
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [reload])
-  return { state, reload }
-}
-
-export function Ps5Deals() {
+export function Ps5Deals({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { state, reload } = usePs5Feed()
   const [model, setModel] = useState<Model>('all')
   const [showOutOfStock, setShowOutOfStock] = useState(false)
@@ -63,80 +40,58 @@ export function Ps5Deals() {
   if (state.status === 'error')
     return (
       <div className="mx-auto max-w-3xl space-y-4">
-        <p className="rounded-2xl border border-line bg-surface p-6 text-center">{state.message}</p>
-        <RefreshPanel reload={reload} />
+        <Empty icon={<Gamepad2 size={22} />} title="No PS5 prices yet">
+          {state.message}
+        </Empty>
+        <RefreshBar reload={reload} onOpenSettings={onOpenSettings} />
       </div>
     )
 
   const { feed } = state
   const hiddenOutOfStock = feed.offers.filter((o) => o.inStock === false).length
+  const storesOn = Object.keys(PS5_STORES).length - (feed.off?.length ?? 0)
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <section className="rounded-2xl bg-gradient-to-r from-[#0b3b8c] to-[#1f6feb] p-4 text-white">
-        <h2 className="text-xl font-extrabold">PS5 console prices</h2>
-        <p className="mt-1 text-sm opacity-90">
-          {days > 0 ? `Black Friday is in ${days} ${days === 1 ? 'day' : 'days'}` : days === 0 ? 'It’s Black Friday' : 'Black Friday has passed'}
-          {' · '}
-          {Object.keys(PS5_STORES).length} stores, checked every hour · updated {ago(feed.generatedAt)}
-        </p>
-      </section>
+      <p className="text-sm text-muted">
+        {days > 0 ? `Black Friday in ${days} ${days === 1 ? 'day' : 'days'}` : days === 0 ? 'It’s Black Friday' : 'Black Friday has passed'}
+        {' · '}
+        {storesOn} stores · updated {ago(feed.generatedAt)}
+      </p>
 
-      <RefreshPanel reload={reload} />
+      <RefreshBar reload={reload} onOpenSettings={onOpenSettings} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-full border border-line bg-surface p-1" role="group" aria-label="Model">
-          {MODELS.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setModel(m.id)}
-              aria-pressed={model === m.id}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${model === m.id ? 'bg-ink text-bg' : 'text-muted hover:text-ink'}`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input type="checkbox" checked={showOutOfStock} onChange={(e) => setShowOutOfStock(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
-          Show out of stock ({hiddenOutOfStock})
-        </label>
+        <Segmented label="Model" options={MODELS} value={model} onChange={setModel} className="w-full sm:w-auto" />
+        {hiddenOutOfStock > 0 && (
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input
+              type="checkbox"
+              checked={showOutOfStock}
+              onChange={(e) => setShowOutOfStock(e.target.checked)}
+              className="h-4 w-4 accent-[var(--ink)]"
+            />
+            Include out of stock ({hiddenOutOfStock})
+          </label>
+        )}
       </div>
 
       {offers.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-line p-8 text-center text-muted">No consoles match.</p>
+        <Empty title="No consoles match">Try another model, or include out-of-stock listings.</Empty>
       ) : (
-        <ol className="space-y-2">
-          {offers.map((o, i) => (
-            <OfferRow key={`${o.store}:${o.url}`} offer={o} rank={i + 1} />
-          ))}
-        </ol>
+        <Card className="overflow-hidden">
+          <ol className="divide-y divide-line">
+            {offers.map((o, i) => (
+              <OfferRow key={`${o.store}:${o.url}`} offer={o} rank={i + 1} />
+            ))}
+          </ol>
+        </Card>
       )}
 
-      <p className="text-xs text-muted">
-        Prices are read from each store’s website and can lag the store by up to an hour. Takealot, Amazon and Makro include
-        marketplace sellers. Always check the price on the store’s page before buying.
+      <p className="px-1 text-xs leading-relaxed text-muted">
+        Prices are read from each store’s website and can lag by up to an hour. Takealot, Amazon and Makro include marketplace
+        sellers. Check the price on the store’s page before buying.
       </p>
-
-      <details className="rounded-2xl border border-line bg-surface p-4 text-sm">
-        <summary className="cursor-pointer font-semibold">Stores checked</summary>
-        <ul className="mt-3 space-y-1.5">
-          {feed.runs.map((r) => (
-            <li key={r.store} className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-2">
-                <span className={`h-2 w-2 shrink-0 rounded-full ${r.ok ? 'bg-ok' : 'bg-brand'}`} />
-                {PS5_STORES[r.store]}
-              </span>
-              <span className="text-right text-muted">
-                {r.count} {r.count === 1 ? 'console' : 'consoles'}
-                {r.at ? ` · ${ago(r.at)}` : ''}
-                {!r.ok && ' · latest check failed'}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </details>
     </div>
   )
 }
@@ -144,50 +99,55 @@ export function Ps5Deals() {
 function OfferRow({ offer: o, rank }: { offer: Ps5Offer; rank: number }) {
   const link = safeLink(o.url)
   const savePct = o.wasPrice ? Math.round((1 - o.price / o.wasPrice) * 100) : 0
-  const best = rank === 1
-  return (
-    <li
-      className={`flex items-center gap-3 rounded-2xl border bg-surface p-3 shadow-sm ${best ? 'border-ok' : 'border-line'} ${o.inStock === false ? 'opacity-60' : ''}`}
-    >
-      <span className="relative shrink-0">
-        <img
-          src={`${import.meta.env.BASE_URL}logos/${o.store}.${o.store === 'computermania' ? 'svg' : 'png'}`}
-          alt=""
-          width={44}
-          height={44}
-          className="h-11 w-11 rounded-xl border border-line bg-white object-contain p-1"
-        />
-        <span
-          className={`absolute -left-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[11px] font-bold ring-2 ring-surface ${best ? 'bg-ok text-white' : 'bg-ink text-bg'}`}
-        >
-          {best ? <Trophy aria-label="Cheapest" size={11} /> : rank}
-        </span>
-      </span>
+  const best = rank === 1 && o.inStock !== false
+  const content = (
+    <>
+      <img
+        src={`${import.meta.env.BASE_URL}logos/${o.store}.${o.store === 'computermania' ? 'svg' : 'png'}`}
+        alt=""
+        width={40}
+        height={40}
+        className="h-10 w-10 shrink-0 rounded-xl bg-white object-contain p-1 ring-1 ring-line"
+      />
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          {PS5_STORES[o.store]}
-          {o.inStock === false && <span className="ml-2 normal-case text-brand">Out of stock</span>}
-          {/parallel import/i.test(o.name) && <span className="ml-2 normal-case text-info">Parallel import</span>}
-        </p>
-        <p className="line-clamp-2 text-[15px] font-medium leading-snug">
-          {link ? (
-            <a href={link} target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:underline">
-              {o.name}
-              <ExternalLink aria-label={`(opens ${PS5_STORES[o.store]})`} size={13} className="ml-1 inline align-[-1px] text-muted" />
-            </a>
-          ) : (
-            o.name
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+          <span className="font-medium text-ink">{PS5_STORES[o.store]}</span>
+          {best && (
+            <span className="inline-flex items-center gap-1 font-medium text-ok">
+              <Trophy aria-hidden size={12} />
+              Cheapest
+            </span>
           )}
+          {o.inStock === false && <span className="font-medium text-warn">Out of stock</span>}
+          {/parallel import/i.test(o.name) && <span className="font-medium text-info">Parallel import</span>}
         </p>
+        <p className="mt-0.5 line-clamp-2 text-[15px] leading-snug">{o.name}</p>
       </div>
       <div className="shrink-0 text-right">
-        <p className="text-lg font-extrabold tabular-nums">{money(o.price)}</p>
+        <p className="text-[17px] font-semibold tabular-nums">{money(o.price)}</p>
         {o.wasPrice && (
-          <p className="text-xs text-muted">
-            <s className="tabular-nums">{money(o.wasPrice)}</s> <span className="font-semibold text-ok">-{savePct}%</span>
+          <p className="text-xs text-muted tabular-nums">
+            <s>{money(o.wasPrice)}</s> <span className="font-medium text-ok">−{savePct}%</span>
           </p>
         )}
       </div>
+    </>
+  )
+  return (
+    <li className={cx(o.inStock === false && 'opacity-55')}>
+      {link ? (
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${o.name}, ${money(o.price)} at ${PS5_STORES[o.store]} (opens the store)`}
+          className="flex items-center gap-3 px-4 py-3 transition hover:bg-surface-2/60"
+        >
+          {content}
+        </a>
+      ) : (
+        <div className="flex items-center gap-3 px-4 py-3">{content}</div>
+      )}
     </li>
   )
 }
@@ -200,25 +160,23 @@ const SETTLE_MS = 4 * 60_000
 type Refresh =
   | { phase: 'idle'; note?: string }
   | { phase: 'running'; run?: Run; since: number; before?: string; doneAt?: number }
-  | { phase: 'setup' }
   | { phase: 'error'; message: string }
 
 /**
- * Refresh reloads the latest prices at once. With a GitHub token saved on this device it also starts a fresh
- * check of every store (the ps5.yml workflow) and follows it until the new prices are published.
+ * Refresh reloads the latest prices at once. With GitHub connected in Settings it also starts a fresh check of
+ * every store (the ps5.yml workflow) and follows it until the new prices are published.
  */
-function RefreshPanel({ reload }: { reload: () => Promise<string | undefined> }) {
-  const repo = useMemo(() => currentRepo(), [])
-  const [token, setToken] = useState(loadToken)
-  const [draft, setDraft] = useState('')
+function RefreshBar({ reload, onOpenSettings }: { reload: () => Promise<string | undefined>; onOpenSettings: () => void }) {
+  const { repo, token } = useGithub()
   const [refresh, setRefresh] = useState<Refresh>({ phase: 'idle' })
   const running = refresh.phase === 'running'
+  const connected = !!(repo && token)
 
   // A run that is already going (the hourly one, or one started earlier) is followed too.
   useEffect(() => {
     if (!repo || !token) return
     let cancelled = false
-    latestRun(repo, token)
+    latestRun(repo, token, 'ps5')
       .then((run) => !cancelled && isActive(run) && setRefresh({ phase: 'running', run, since: Date.now() }))
       .catch(() => {})
     return () => {
@@ -235,10 +193,10 @@ function RefreshPanel({ reload }: { reload: () => Promise<string | undefined> })
           setRefresh({ phase: 'error', message: 'This is taking longer than usual. Check the run on GitHub.' })
           return
         }
-        const run = await latestRun(repo, token)
+        const run = await latestRun(repo, token, 'ps5')
         if (run?.status === 'completed' && (!refresh.run || run.id === refresh.run.id)) {
           if (run.conclusion !== 'success' && run.conclusion !== 'failure') {
-            setRefresh({ phase: 'error', message: describeRun(run) })
+            setRefresh({ phase: 'error', message: describeRun(run, 'ps5') })
             return
           }
           // The site can take a minute or two to serve the newly published file.
@@ -249,7 +207,7 @@ function RefreshPanel({ reload }: { reload: () => Promise<string | undefined> })
           }
           const doneAt = refresh.doneAt ?? Date.now()
           if (Date.now() - doneAt > SETTLE_MS) {
-            setRefresh({ phase: 'idle', note: 'The check finished, but the published prices have not changed yet. Try Refresh again shortly.' })
+            setRefresh({ phase: 'idle', note: 'The check finished, but the published prices haven’t changed yet. Try again shortly.' })
             return
           }
           setRefresh({ ...refresh, run, doneAt })
@@ -265,104 +223,53 @@ function RefreshPanel({ reload }: { reload: () => Promise<string | undefined> })
 
   const onRefresh = async () => {
     const before = await reload()
-    if (!repo) {
-      setRefresh({ phase: 'idle', note: 'Reloaded the latest prices.' })
-      return
-    }
-    if (!token) {
-      setRefresh({ phase: 'setup' })
+    if (!repo || !token) {
+      setRefresh({ phase: 'idle', note: 'Loaded the latest published prices.' })
       return
     }
     setRefresh({ phase: 'running', since: Date.now(), before })
     try {
-      const run = await startRun(repo, token)
+      const run = await startRun(repo, token, 'ps5')
       setRefresh({ phase: 'running', run, since: Date.now(), before })
     } catch (e) {
       setRefresh({ phase: 'error', message: (e as Error).message })
     }
   }
 
-  const onSaveToken = () => {
-    const t = draft.trim()
-    if (!t) return
-    saveToken(t)
-    setToken(t)
-    setDraft('')
-    setRefresh({ phase: 'idle', note: 'Token saved on this device. Tap Refresh to check every store now.' })
-  }
-
-  const onForget = () => {
-    saveToken(null)
-    setToken(null)
-    setRefresh({ phase: 'idle', note: 'Token removed from this device.' })
-  }
-
   return (
-    <section className="space-y-3 rounded-2xl border border-line bg-surface p-3 text-sm">
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={running}
-          className="flex shrink-0 items-center gap-2 rounded-full bg-ink px-4 py-2 font-semibold text-bg disabled:opacity-60"
-        >
-          <RefreshCw aria-hidden size={16} className={running ? 'animate-spin' : ''} />
-          {running ? 'Checking…' : 'Refresh'}
-        </button>
-        <p className="min-w-0 text-muted" role="status">
-          {refresh.phase === 'running' && describeRun(refresh.run)}
-          {refresh.phase === 'error' && <span className="text-brand">{refresh.message}</span>}
-          {refresh.phase === 'idle' &&
-            (refresh.note ?? (token && repo ? 'Checks every store now and loads the new prices.' : 'Loads the latest prices.'))}
-          {refresh.phase === 'setup' && 'To check every store from here, add a GitHub token on this device.'}
-        </p>
-      </div>
-
-      {repo && running && refresh.run && (
-        <a href={refresh.run.html_url} target="_blank" rel="noopener noreferrer" className="inline-block text-info underline-offset-2 hover:underline">
-          Follow the run on GitHub
-        </a>
-      )}
-
-      {repo && refresh.phase === 'setup' && (
-        <div className="space-y-2 rounded-xl bg-bg p-3">
-          <p>
-            Create a{' '}
-            <a href={newTokenPage} target="_blank" rel="noopener noreferrer" className="text-info underline">
-              fine-grained GitHub token
-            </a>{' '}
-            with <b>Only select repositories: {repo.name}</b> and the permission <b>Actions: Read and write</b>, then paste it here.
-            It stays on this device only and can do nothing but run this repository’s workflows.
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="password"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="github_pat_…"
-              autoComplete="off"
-              className="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2"
-            />
-            <button type="button" onClick={onSaveToken} className="rounded-lg bg-ink px-3 py-2 font-semibold text-bg">
-              Save
-            </button>
-          </div>
-          <p className="text-muted">
-            Or start it on GitHub instead:{' '}
-            <a href={actionsPage(repo)} target="_blank" rel="noopener noreferrer" className="text-info underline">
-              Run workflow
-            </a>
-            .
-          </p>
-        </div>
-      )}
-
-      {repo && token && !running && (
-        <button type="button" onClick={onForget} className="flex items-center gap-1.5 text-xs text-muted hover:text-ink">
-          <KeyRound aria-hidden size={13} />
-          Remove the GitHub token from this device
-        </button>
-      )}
-    </section>
+    <Card className="flex items-center gap-3 p-3">
+      <Button variant="primary" onClick={onRefresh} disabled={running}>
+        <RefreshCw aria-hidden size={16} className={running ? 'animate-spin' : ''} />
+        {running ? 'Checking' : 'Refresh'}
+      </Button>
+      <p className="min-w-0 flex-1 text-[13px] leading-snug text-muted" role="status">
+        {refresh.phase === 'running' && (
+          <>
+            {describeRun(refresh.run, 'ps5')}{' '}
+            {refresh.run && (
+              <a href={refresh.run.html_url} target="_blank" rel="noopener noreferrer" className="text-info underline-offset-2 hover:underline">
+                View run
+              </a>
+            )}
+          </>
+        )}
+        {refresh.phase === 'error' && <span className="text-warn">{refresh.message}</span>}
+        {refresh.phase === 'idle' &&
+          (refresh.note ??
+            (connected ? (
+              'Checks every store now, then loads the new prices.'
+            ) : (
+              <>
+                Loads the latest published prices.{' '}
+                {repo && (
+                  <button type="button" onClick={onOpenSettings} className="text-info underline-offset-2 hover:underline">
+                    Connect GitHub
+                  </button>
+                )}
+                {repo && ' to check stores on demand.'}
+              </>
+            )))}
+      </p>
+    </Card>
   )
 }

@@ -1,41 +1,93 @@
 @import 'tailwindcss';
 
+/*
+ * Colour tokens. Light is a warm cream with near-white cards; dark is a warm charcoal (not black) with lifted
+ * surfaces, so depth comes from lightness rather than borders. Both share one warm-neutral grey ramp and one accent.
+ * The theme is "system" unless Settings sets data-theme on <html>.
+ */
 :root {
-  --bg: #f6f7fb;
-  --surface: #ffffff;
-  --ink: #12141a;
-  --muted: #6b7280;
-  --line: #e6e8ef;
-  --brand: #ff5a36;
-  --brand-2: #ffb020;
-  --ok: #12a150;
-  --info: #2563eb;
+  --bg: #f5f1ea;
+  --surface: #fffcf7;
+  --surface-2: #ede7dc;
+  --ink: #1e1c19;
+  --muted: #6b655c;
+  --faint: #9a9388;
+  --line: #e4dccf;
+  --brand: #c8461e;
+  --brand-soft: #f9e4d9;
+  --on-brand: #ffffff;
+  --ok: #2e7d4f;
+  --ok-soft: #e1efe3;
+  --warn: #9a5b0f;
+  --warn-soft: #f6e9d3;
+  --info: #2f62c8;
+  --info-soft: #e3eafa;
+  --shadow: 0 1px 2px rgb(60 45 25 / 0.05), 0 1px 1px rgb(60 45 25 / 0.03);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0e1014;
-    --surface: #171a21;
-    --ink: #f2f4f8;
-    --muted: #9aa3b2;
-    --line: #262b36;
-    --ok: #3ddc84;
-    --info: #7aa7ff;
+  :root:not([data-theme='light']) {
+    --bg: #1b1a18;
+    --surface: #252421;
+    --surface-2: #302e2a;
+    --ink: #f3efe8;
+    --muted: #aaa398;
+    --faint: #78726a;
+    --line: #36332f;
+    --brand: #ff7a4d;
+    --brand-soft: #3d2a21;
+    --on-brand: #1b1a18;
+    --ok: #6cc58f;
+    --ok-soft: #223429;
+    --warn: #e5a54b;
+    --warn-soft: #3a2f1f;
+    --info: #8aaaf2;
+    --info-soft: #252d40;
+    --shadow: none;
     color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #1b1a18;
+  --surface: #252421;
+  --surface-2: #302e2a;
+  --ink: #f3efe8;
+  --muted: #aaa398;
+  --faint: #78726a;
+  --line: #36332f;
+  --brand: #ff7a4d;
+  --brand-soft: #3d2a21;
+  --on-brand: #1b1a18;
+  --ok: #6cc58f;
+  --ok-soft: #223429;
+  --warn: #e5a54b;
+  --warn-soft: #3a2f1f;
+  --info: #8aaaf2;
+  --info-soft: #252d40;
+  --shadow: none;
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
+  --color-faint: var(--faint);
   --color-line: var(--line);
   --color-brand: var(--brand);
-  --color-brand2: var(--brand-2);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
   --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
   --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --shadow-card: var(--shadow);
   --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -50,12 +102,20 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+
+/* Visible focus for keyboard users only. */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
 /* Keep content clear of the iPhone home indicator and notch. */
 .safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .safe-top {
   padding-top: env(safe-area-inset-top);
@@ -66,4 +126,36 @@ body {
 }
 .no-scrollbar {
   scrollbar-width: none;
+}
+
+/* Sheets slide up on a phone and fade in on wider screens. */
+dialog.sheet[open] {
+  animation: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+dialog.sheet[open]::backdrop {
+  animation: fade-in 0.2s ease-out;
+}
+@media (min-width: 640px) {
+  dialog.sheet[open] {
+    animation: fade-in 0.18s ease-out;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

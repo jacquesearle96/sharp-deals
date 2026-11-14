@@ -5,7 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Sharp Deals</title>
-    <meta name="theme-color" content="#ff5a36" />
+    <meta name="theme-color" content="#f5f1ea" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1b1a18" media="(prefers-color-scheme: dark)" />
+    <script>
+      // Apply the theme chosen in Settings before the first paint, so the page never flashes the other one.
+      try {
+        var t = JSON.parse(localStorage.getItem('sharp-deals:theme') || '"system"')
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+      } catch (e) {}
+    </script>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Sharp Deals" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
