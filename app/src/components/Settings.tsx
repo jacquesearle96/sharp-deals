@@ -364,7 +364,7 @@ function RunNow({ workflow }: { workflow: Scrape }) {
         target="_blank"
         rel="noopener noreferrer"
         title={describeRun(run, workflow)}
-        className="flex items-center gap-1.5 pb-0.5 text-[13px] text-info underline-offset-2 hover:underline"
+        className="flex h-8 items-center gap-1.5 text-[13px] leading-none font-medium text-info underline-offset-2 hover:underline"
       >
         <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-info" />
         {run?.status === 'in_progress' ? 'Running' : 'Queued'}
@@ -372,8 +372,8 @@ function RunNow({ workflow }: { workflow: Scrape }) {
     )
 
   return (
-    <Button size="sm" variant="ghost" onClick={start} title={state === 'error' ? message : `Last run ${run ? ago(run.created_at) : 'unknown'}`}>
-      <Play aria-hidden size={13} />
+    <Button size="sm" variant="ghost" onClick={start} className="-mr-2 gap-1.5 leading-none text-brand!" title={state === 'error' ? message : `Last run ${run ? ago(run.created_at) : 'unknown'}`}>
+      <Play aria-hidden size={12} strokeWidth={2.4} className="fill-current" />
       {state === 'error' ? 'Retry' : 'Run now'}
     </Button>
   )

@@ -111,7 +111,7 @@ export function Chip({ on, onClick, children }: { on: boolean; onClick: () => vo
 export function Group({ title, footer, action, children }: { title: string; footer?: ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <div className="flex min-h-8 items-end justify-between gap-3 px-1">
+      <div className="flex min-h-8 items-center justify-between gap-3 px-1">
         <h2 className="text-[13px] font-medium tracking-wide text-muted uppercase">{title}</h2>
         {action}
       </div>
