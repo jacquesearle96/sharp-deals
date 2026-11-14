@@ -1,0 +1,85 @@
+[
+ {
+  "store": "pnp",
+  "ok": true,
+  "count": 10922,
+  "at": "2026-11-13T19:52:32.990Z",
+  "notes": [],
+  "error": "Error: page.evaluate: Error: 400 from PnP search\n    at eval (eval at evaluate (:370:30), <anonymous>:13:24)\n    at async <anonymous>:396:30"
+ },
+ {
+  "store": "checkers",
+  "ok": true,
+  "count": 1742,
+  "at": "2026-11-12T07:31:49.611Z",
+  "notes": [
+   "page 1 showed no offers after 3 tries: title \"Just a moment...\" at https://www.cataloguespecials.co.za/stores/checkers/specials?page=1; text: www.cataloguespecials.co.za Performing security verification This website uses a security service to protect against mal",
+   "page 2 showed no offers after 3 tries: title \"Just a moment...\" at https://www.cataloguespecials.co.za/stores/checkers/specials?page=2; text: www.cataloguespecials.co.za Performing security verification This website uses a security service to protect against mal"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "woolworths",
+  "ok": true,
+  "count": 2995,
+  "at": "2026-11-14T06:56:42.036Z",
+  "notes": []
+ },
+ {
+  "store": "foodlovers",
+  "ok": true,
+  "count": 441,
+  "at": "2026-11-12T07:48:59.815Z",
+  "notes": [
+   "page 1 showed no offers after 3 tries: title \"Just a moment...\" at https://www.cataloguespecials.co.za/stores/food-lover-s-market/specials?page=1; text: www.cataloguespecials.co.za Performing security verification This website uses a security service to protect against mal",
+   "page 2 showed no offers after 3 tries: title \"Just a moment...\" at https://www.cataloguespecials.co.za/stores/food-lover-s-market/specials?page=2; text: www.cataloguespecials.co.za Performing security verification This website uses a security service to protect against mal"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "spar",
+  "ok": true,
+  "count": 10,
+  "at": "2026-11-14T07:16:18.998Z",
+  "notes": []
+ },
+ {
+  "store": "clicks",
+  "ok": true,
+  "count": 159,
+  "at": "2026-11-13T20:13:55.979Z",
+  "notes": [
+   "no products on /health-and-pharmacy/c/OH10005?q=%3Arele: title \"Attention Required! | Cloudflare\" at https://clicks.co.za/health-and-pharmacy/c/OH10005?q=%3Arelevance%3ApromoStickerplp%3A2%3A; text: Sorry, you have been blocked You are unable to access clicks.co.za Why have I been blocked? This webs",
+   "no products on /toiletries/c/OH10010?q=%3Arelevance%3Ap: title \"Attention Required! | Cloudflare\" at https://clicks.co.za/toiletries/c/OH10010?q=%3Arelevance%3ApromoStickerplp%3A1%3ApromoStic; text: Sorry, you have been blocked You are unable to access clicks.co.za Why have I been blocked? This webs",
+   "no products on /beauty/c/OH10001?q=%3Arelevance%3Apromo: title \"Attention Required! | Cloudflare\" at https://clicks.co.za/beauty/c/OH10001?q=%3Arelevance%3ApromoStickerplp%3A2%3ApromoStickerp; text: Sorry, you have been blocked You are unable to access clicks.co.za Why have I been blocked? This webs",
+   "no products on /products/c/OH1?q=%3Arelevance%3Acategor: title \"Attention Required! | Cloudflare\" at https://clicks.co.za/products/c/OH1?q=%3Arelevance%3Acategory%3AOH10008%3ApromoStickerplp%; text: Sorry, you have been blocked You are unable to access clicks.co.za Why have I been blocked? This webs"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "dischem",
+  "ok": true,
+  "count": 354,
+  "at": "2026-10-31T05:05:47.087Z",
+  "notes": [
+   "no products on https://www.dischem.co.za/on-promotion: title \"Just a moment...\" at https://www.dischem.co.za/on-promotion?p=1; text: www.dischem.co.za Performing security verification This website uses a security service to protect against malicious bot"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "babycity",
+  "ok": true,
+  "count": 2920,
+  "at": "2026-11-14T07:16:27.331Z",
+  "notes": []
+ },
+ {
+  "store": "babiesrus",
+  "ok": true,
+  "count": 2284,
+  "at": "2026-11-14T07:25:17.425Z",
+  "notes": [
+   "no products on https://www.babiesrus.co.za/dynamite-deals: title \"Dynamite Deals | Babies R Us Online\" at https://www.babiesrus.co.za/dynamite-deals?p=1; text: Skip to Content Stores Help My Account Sign In Register My Cart R 0.00 Your Cart It seems like your cart could use some "
+  ]
+ }
+]
