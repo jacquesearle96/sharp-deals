@@ -128,6 +128,29 @@ body {
   scrollbar-width: none;
 }
 
+/* Sheets slide up on a phone and fade in on wider screens. */
+dialog.sheet[open] {
+  animation: sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+dialog.sheet[open]::backdrop {
+  animation: fade-in 0.2s ease-out;
+}
+@media (min-width: 640px) {
+  dialog.sheet[open] {
+    animation: fade-in 0.18s ease-out;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

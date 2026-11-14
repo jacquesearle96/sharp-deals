@@ -1,4 +1,4 @@
-import { KeyRound, Monitor, Moon, Play, Sun } from 'lucide-react'
+import { Gamepad2, KeyRound, Monitor, Moon, PanelBottom, Play, ShoppingCart, Sun, Users } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { PS5_STORES, type Ps5StoreId } from '../../../shared/ps5.ts'
 import { formatOff, OFF_VARIABLES, parseOff, type Scrape } from '../../../shared/storeSwitches.ts'
@@ -12,10 +12,23 @@ import { usePs5Feed } from '../lib/ps5Feed.ts'
 import { storeStatus, type RunLike } from '../lib/status.ts'
 import { STORE_INFO } from '../lib/stores.ts'
 import { HIDEABLE_TABS, type Tab } from './BottomNav.tsx'
-import { ShareList } from './ShareList.tsx'
-import { Button, Group, HealthDot, Notice, Row, Segmented, Switch } from './ui.tsx'
+import { SharePanel, shareSummary } from './ShareList.tsx'
+import { Button, Card, Group, HealthDot, IconTile, NavRow, Notice, Row, Segmented, Sheet, Switch } from './ui.tsx'
+
+export type SettingsPage = 'main' | 'toolbar' | 'grocery' | 'ps5' | 'github'
+
+/** Titles for the header when a sub-page is open. */
+export const SETTINGS_TITLES: Record<SettingsPage, string> = {
+  main: 'Settings',
+  toolbar: 'Customise toolbar',
+  grocery: 'Grocery & baby stores',
+  ps5: 'PS5 stores',
+  github: 'GitHub access',
+}
 
 interface Props {
+  page: SettingsPage
+  onPage: (page: SettingsPage) => void
   theme: Theme
   onTheme: (theme: Theme) => void
   hiddenTabs: Tab[]
@@ -30,64 +43,164 @@ const THEMES: { id: Theme; label: ReactNode }[] = [
   { id: 'dark', label: <><Moon aria-hidden size={14} />Dark</> },
 ]
 
-export function Settings({ theme, onTheme, hiddenTabs, onToggleTab, list, deals }: Props) {
+const GROCERY_STORES = DEAL_STORES.map((id) => ({ id, name: STORE_INFO[id].name }))
+const PS5_STORE_LIST = (Object.keys(PS5_STORES) as Ps5StoreId[]).map((id) => ({ id, name: PS5_STORES[id] }))
+
+export function Settings({ page, onPage, theme, onTheme, hiddenTabs, onToggleTab, list, deals }: Props) {
   const ps5 = usePs5Feed()
-  const groceryRuns = deals.status === 'ready' ? deals.index.runs : []
-  const ps5Runs = ps5.state.status === 'ready' ? ps5.state.feed.runs : []
+  const { repo, token } = useGithub()
+  const [sharing, setSharing] = useState(false)
+  const groceryRuns = new Map<string, RunLike>((deals.status === 'ready' ? deals.index.runs : []).map((r) => [r.store, r]))
+  const ps5Runs = new Map<string, RunLike>((ps5.state.status === 'ready' ? ps5.state.feed.runs : []).map((r) => [r.store, r]))
+  const groceryOff = deals.status === 'ready' ? (deals.index.off ?? []) : []
+  const ps5Off = ps5.state.status === 'ready' ? (ps5.state.feed.off ?? []) : []
+
+  if (page === 'grocery')
+    return (
+      <SubPage>
+        <StoreSwitches
+          scrape="grocery"
+          schedule="Scraped every 6 hours."
+          stores={GROCERY_STORES}
+          runs={groceryRuns}
+          publishedOff={groceryOff}
+          unit={['deal', 'deals']}
+          onConnect={() => onPage('github')}
+        />
+      </SubPage>
+    )
+  if (page === 'ps5')
+    return (
+      <SubPage>
+        <StoreSwitches
+          scrape="ps5"
+          schedule="Checked every hour during November."
+          stores={PS5_STORE_LIST}
+          runs={ps5Runs}
+          publishedOff={ps5Off}
+          unit={['console', 'consoles']}
+          onConnect={() => onPage('github')}
+        />
+      </SubPage>
+    )
+  if (page === 'toolbar')
+    return (
+      <SubPage>
+        <Group title="Tabs" footer="Choose which tabs appear in the toolbar. Settings is always there.">
+          {HIDEABLE_TABS.map((t) => {
+            const shown = !hiddenTabs.includes(t.id)
+            return (
+              <Row
+                key={t.id}
+                leading={<t.icon aria-hidden size={20} className="text-muted" />}
+                title={t.title}
+                trailing={<Switch on={shown} onChange={() => onToggleTab(t.id)} label={`Show ${t.title} in the toolbar`} />}
+              />
+            )
+          })}
+        </Group>
+      </SubPage>
+    )
+  if (page === 'github')
+    return (
+      <SubPage>
+        <GithubAccess />
+      </SubPage>
+    )
+
+  const share = shareSummary(list.household, list.status, list.canShare)
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <Group title="Appearance" footer="Auto follows your phone’s light or dark setting.">
-        <div className="p-3">
-          <Segmented label="Theme" options={THEMES} value={theme} onChange={onTheme} />
+    <div className="mx-auto max-w-2xl space-y-6">
+      <Group title="Appearance">
+        <div className="p-2">
+          <Segmented label="Theme (Auto follows your phone’s setting)" options={THEMES} value={theme} onChange={onTheme} />
         </div>
       </Group>
 
-      <Group title="Toolbar" footer="Choose which tabs appear in the toolbar. Settings is always there.">
-        {HIDEABLE_TABS.map((t) => {
-          const shown = !hiddenTabs.includes(t.id)
-          return (
-            <Row
-              key={t.id}
-              leading={<t.icon aria-hidden size={20} className="text-muted" />}
-              title={t.title}
-              trailing={<Switch on={shown} onChange={() => onToggleTab(t.id)} label={`Show ${t.title} in the toolbar`} />}
-            />
-          )
-        })}
+      <Group title="General">
+        <NavRow
+          leading={
+            <IconTile className="bg-brand-soft text-brand">
+              <PanelBottom aria-hidden size={17} />
+            </IconTile>
+          }
+          title="Customise toolbar"
+          value={`${HIDEABLE_TABS.length - hiddenTabs.length} of ${HIDEABLE_TABS.length} tabs`}
+          onClick={() => onPage('toolbar')}
+        />
+        <NavRow
+          leading={
+            <IconTile className="bg-info-soft text-info">
+              <Users aria-hidden size={17} />
+            </IconTile>
+          }
+          title="Shared list"
+          detail={list.canShare ? undefined : 'Needs a Supabase project, see supabase/README.md'}
+          value={<span className={share.tone === 'ok' ? 'text-ok' : share.tone === 'warn' ? 'text-warn' : undefined}>{share.text}</span>}
+          onClick={() => setSharing(true)}
+          disabled={!list.canShare}
+        />
       </Group>
 
-      <ShareList
-        household={list.household}
-        status={list.status}
-        canShare={list.canShare}
-        onStart={list.startSharing}
-        onJoin={list.join}
-        onLeave={list.leave}
-      />
+      <Group title="Stores & data">
+        <NavRow
+          leading={
+            <IconTile className="bg-ok-soft text-ok">
+              <ShoppingCart aria-hidden size={17} />
+            </IconTile>
+          }
+          title="Grocery & baby stores"
+          detail={<StoresSummary stores={GROCERY_STORES} runs={groceryRuns} off={groceryOff} />}
+          onClick={() => onPage('grocery')}
+        />
+        <NavRow
+          leading={
+            <IconTile className="bg-info-soft text-info">
+              <Gamepad2 aria-hidden size={17} />
+            </IconTile>
+          }
+          title="PS5 stores"
+          detail={<StoresSummary stores={PS5_STORE_LIST} runs={ps5Runs} off={ps5Off} />}
+          onClick={() => onPage('ps5')}
+        />
+        <NavRow
+          leading={
+            <IconTile className="bg-surface-2 text-ink">
+              <KeyRound aria-hidden size={17} />
+            </IconTile>
+          }
+          title="GitHub access"
+          detail="Needed to switch stores on or off"
+          value={repo && token ? <span className="text-ok">Connected</span> : 'Not connected'}
+          onClick={() => onPage('github')}
+        />
+      </Group>
 
-      <StoreSwitches
-        scrape="grocery"
-        title="Grocery & baby stores"
-        schedule="Scraped every 6 hours."
-        stores={DEAL_STORES.map((id) => ({ id, name: STORE_INFO[id].name }))}
-        runs={new Map<string, RunLike>(groceryRuns.map((r) => [r.store, r]))}
-        publishedOff={deals.status === 'ready' ? (deals.index.off ?? []) : []}
-        unit={['deal', 'deals']}
-      />
-
-      <StoreSwitches
-        scrape="ps5"
-        title="PS5 stores"
-        schedule="Checked every hour during November."
-        stores={(Object.keys(PS5_STORES) as Ps5StoreId[]).map((id) => ({ id, name: PS5_STORES[id] }))}
-        runs={new Map<string, RunLike>(ps5Runs.map((r) => [r.store, r]))}
-        publishedOff={ps5.state.status === 'ready' ? (ps5.state.feed.off ?? []) : []}
-        unit={['console', 'consoles']}
-      />
-
-      <GithubAccess />
+      <Sheet open={sharing} onClose={() => setSharing(false)} title="Shared list">
+        <SharePanel household={list.household} status={list.status} onStart={list.startSharing} onJoin={list.join} onLeave={list.leave} />
+      </Sheet>
     </div>
+  )
+}
+
+function SubPage({ children }: { children: ReactNode }) {
+  return <div className="mx-auto max-w-2xl space-y-8">{children}</div>
+}
+
+/** "All 9 up to date", or how many need attention and how many are off. */
+function StoresSummary({ stores, runs, off }: { stores: { id: string }[]; runs: Map<string, RunLike>; off: string[] }) {
+  const statuses = stores.map((s) => storeStatus(runs.get(s.id), off.includes(s.id), ['', '']).health)
+  const failing = statuses.filter((h) => h === 'failing').length
+  const offCount = statuses.filter((h) => h === 'off').length
+  if (runs.size === 0) return <>Loading…</>
+  if (!failing && !offCount) return <>All {stores.length} up to date</>
+  return (
+    <>
+      {failing > 0 && <span className="text-warn">{failing} need{failing === 1 ? 's' : ''} attention</span>}
+      {failing > 0 && offCount > 0 && ' · '}
+      {offCount > 0 && `${offCount} off`}
+    </>
   )
 }
 
@@ -97,21 +210,22 @@ export function Settings({ theme, onTheme, hiddenTabs, onToggleTab, list, deals 
  */
 function StoreSwitches<T extends StoreId | Ps5StoreId>({
   scrape,
-  title,
   schedule,
   stores,
   runs,
   publishedOff,
   unit,
+  onConnect,
 }: {
   scrape: Scrape
-  title: string
   schedule: string
   stores: { id: T; name: string }[]
   runs: Map<string, RunLike>
   /** Stores the latest published data was built without */
   publishedOff: string[]
   unit: [string, string]
+  /** Opens GitHub access */
+  onConnect: () => void
 }) {
   const { repo, token } = useGithub()
   const connected = !!(repo && token)
@@ -160,13 +274,25 @@ function StoreSwitches<T extends StoreId | Ps5StoreId>({
 
   const footer = !repo
     ? `${schedule} Store switches work on the published site.`
-    : !connected
-      ? `${schedule} Connect GitHub below to switch stores on or off.`
-      : `${schedule} A store that is off isn’t scraped and its prices are hidden.`
+    : `${schedule} A store that is off isn’t scraped and its prices are hidden.`
 
   return (
     <div className="space-y-2">
-      <Group title={title} action={connected && <RunNow workflow={scrape} />} footer={footer}>
+      {repo && !connected && (
+        <Card className="mb-6 overflow-hidden">
+          <NavRow
+            leading={
+              <IconTile className="bg-surface-2 text-ink">
+                <KeyRound aria-hidden size={17} />
+              </IconTile>
+            }
+            title="Connect GitHub"
+            detail="To switch stores on or off and run scrapes from here"
+            onClick={onConnect}
+          />
+        </Card>
+      )}
+      <Group title="Stores" action={connected && <RunNow workflow={scrape} />} footer={footer}>
         {stores.map((s) => {
           const isOff = off.includes(s.id)
           const status = storeStatus(runs.get(s.id), isOff, unit)
@@ -260,14 +386,14 @@ function GithubAccess() {
 
   if (!repo)
     return (
-      <Group title="GitHub access">
+      <Group title="Token">
         <Row title="Not available here" detail="Connecting GitHub works on the published site, where the app knows its repository." />
       </Group>
     )
 
   if (token)
     return (
-      <Group title="GitHub access" footer="The token is stored on this device only.">
+      <Group title="Token" footer="The token is stored on this device only.">
         <Row
           leading={<KeyRound aria-hidden size={20} className="text-ok" />}
           title="Connected"
@@ -282,7 +408,7 @@ function GithubAccess() {
     )
 
   return (
-    <Group title="GitHub access" footer="The token stays on this device and can only run this repository’s scrapes and change its store settings.">
+    <Group title="Token" footer="The token stays on this device and can only run this repository’s scrapes and change its store settings.">
       <div className="space-y-3 p-4 text-[15px] leading-relaxed">
         <p>Connect GitHub to switch stores on or off, and to start scrapes from the app.</p>
         <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">

@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+import { ChevronRight, X } from 'lucide-react'
+import { useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import type { Health } from '../lib/status.ts'
 
 /** Shared building blocks, so every screen uses the same shapes, spacing and states. */
@@ -165,5 +166,86 @@ export function Notice({ tone = 'neutral', children }: { tone?: 'neutral' | 'ok'
     >
       {children}
     </p>
+  )
+}
+
+/** A Group row that opens something: a sub-page or a sheet. Shows a short value and a chevron. */
+export function NavRow({
+  leading,
+  title,
+  detail,
+  value,
+  onClick,
+  disabled,
+}: {
+  leading?: ReactNode
+  title: ReactNode
+  detail?: ReactNode
+  value?: ReactNode
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-surface-2/60 active:bg-surface-2 disabled:pointer-events-none"
+    >
+      {leading}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] leading-snug">{title}</span>
+        {detail && <span className="mt-0.5 block text-[13px] leading-snug text-muted">{detail}</span>}
+      </span>
+      {value && <span className="shrink-0 text-[15px] text-muted">{value}</span>}
+      {!disabled && <ChevronRight aria-hidden size={18} className="shrink-0 text-faint" />}
+    </button>
+  )
+}
+
+/** A rounded tile behind a row's icon, iOS Settings style. */
+export function IconTile({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cx('grid h-8 w-8 shrink-0 place-items-center rounded-lg', className)}>{children}</span>
+}
+
+/**
+ * A modal sheet: slides up from the bottom on a phone, a centred dialog on wide screens. Built on <dialog>, so focus
+ * stays inside while open and Escape closes it. A tap outside closes it too.
+ */
+export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+  useEffect(() => {
+    const d = ref.current
+    if (!d) return
+    if (open && !d.open) d.showModal()
+    if (!open && d.open) d.close()
+  }, [open])
+  return (
+    <dialog
+      ref={ref}
+      aria-labelledby={titleId}
+      onClose={onClose}
+      onClick={(e) => e.target === ref.current && onClose()}
+      className="sheet mt-auto mb-0 w-full max-w-none rounded-t-3xl bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/45 sm:m-auto sm:max-w-md sm:rounded-3xl"
+    >
+      <div className="safe-bottom max-h-[85dvh] overflow-y-auto">
+        <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-full bg-line sm:hidden" />
+        <div className="flex items-center justify-between gap-3 px-5 pt-3 pb-1 sm:pt-5">
+          <h2 id={titleId} className="text-lg font-semibold tracking-tight">
+            {title}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="grid h-8 w-8 place-items-center rounded-full bg-surface-2 text-muted hover:text-ink"
+          >
+            <X aria-hidden size={16} />
+          </button>
+        </div>
+        <div className="px-5 pt-2 pb-6">{children}</div>
+      </div>
+    </dialog>
   )
 }

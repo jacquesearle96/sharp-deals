@@ -1,12 +1,12 @@
-import { ShoppingBasket, Sparkles, Users } from 'lucide-react'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ChevronLeft, ShoppingBasket, Sparkles, Users } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { DealProduct, StoreId } from '../../shared/types.ts'
 import { BottomNav, TABS, TopNav, type Tab } from './components/BottomNav.tsx'
 import { DealCard } from './components/DealCard.tsx'
 import { DealList } from './components/DealList.tsx'
 import { FilterBar } from './components/FilterBar.tsx'
 import { Ps5Deals } from './components/Ps5Deals.tsx'
-import { Settings } from './components/Settings.tsx'
+import { Settings, SETTINGS_TITLES, type SettingsPage } from './components/Settings.tsx'
 import { ShopAround } from './components/ShopAround.tsx'
 import { Button, Card, cx, Empty } from './components/ui.tsx'
 import { useDeals, useShopIndex, type Freshness } from './lib/data.ts'
@@ -32,6 +32,30 @@ export default function App() {
   // A tab hidden in Settings cannot stay open; fall back to the first one still shown.
   const tab = tabs.some((t) => t.id === chosen) ? chosen : tabs[0].id
   const info = TABS.find((t) => t.id === tab)!
+  const [settingsPage, setSettingsPage] = useState<SettingsPage>('main')
+  const subPage = tab === 'settings' && settingsPage !== 'main'
+
+  // A Settings sub-page gets its own history entry, so the phone's back gesture returns to Settings.
+  const openSettingsPage = useCallback((page: SettingsPage) => {
+    history.pushState({ settingsPage: page }, '')
+    setSettingsPage(page)
+  }, [])
+  const closeSettingsPage = () => (history.state?.settingsPage ? history.back() : setSettingsPage('main'))
+  useEffect(() => {
+    const onPop = () => setSettingsPage((history.state?.settingsPage as SettingsPage | undefined) ?? 'main')
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  /** Tapping a tab opens it at its top level; tapping Settings again leaves a sub-page. */
+  const selectTab = (next: Tab) => {
+    if (next === 'settings' && subPage) closeSettingsPage()
+    setChosen(next)
+  }
+  const goToSettings = (page: SettingsPage = 'main') => {
+    setChosen('settings')
+    if (page !== 'main') openSettingsPage(page)
+  }
   // The big Baby and Tech catalogue only loads once someone opens that tab.
   const shop = useShopIndex(tab === 'shop')
   const [search, setSearch] = useState<Filters>(SEARCH_DEFAULTS)
@@ -40,7 +64,7 @@ export default function App() {
   // Each tab starts at the top.
   useEffect(() => {
     window.scrollTo({ top: 0 })
-  }, [tab])
+  }, [tab, settingsPage])
 
   const products = useMemo(() => (state.status === 'ready' ? state.index.products : []), [state])
   const counts = useMemo(() => {
@@ -60,10 +84,22 @@ export default function App() {
           <p className="text-lg font-semibold tracking-tight">
             Sharp Deals<span className="text-brand">.</span>
           </p>
-          <TopNav tabs={tabs} tab={tab} onChange={setChosen} listCount={list.items.length} />
+          <TopNav tabs={tabs} tab={tab} onChange={selectTab} listCount={list.items.length} />
         </div>
-        <div className="flex items-end justify-between gap-4 px-4 pt-3 pb-3 lg:px-8 lg:pt-2">
-          <h1 className="text-[28px] leading-tight font-semibold tracking-tight lg:text-3xl">{info.title}</h1>
+        {subPage && (
+          <button
+            type="button"
+            onClick={closeSettingsPage}
+            className="ml-2 flex h-9 items-center gap-0.5 pr-3 text-[15px] text-brand lg:ml-6"
+          >
+            <ChevronLeft aria-hidden size={22} />
+            Settings
+          </button>
+        )}
+        <div className={cx('flex items-end justify-between gap-4 px-4 pb-3 lg:px-8', subPage ? 'pt-0' : 'pt-3 lg:pt-2')}>
+          <h1 className="text-[28px] leading-tight font-semibold tracking-tight lg:text-3xl">
+            {tab === 'settings' ? SETTINGS_TITLES[settingsPage] : info.title}
+          </h1>
           {state.status === 'ready' && (tab === 'search' || tab === 'deals') && (
             <DataAge generatedAt={state.index.generatedAt} freshness={freshness} />
           )}
@@ -107,16 +143,25 @@ export default function App() {
         {tab === 'shop' && <ShopAround shop={shop.state} has={list.has} onToggle={list.toggle} />}
 
         {/* TEMPORARY (Black Friday 2026) */}
-        {tab === 'ps5' && <Ps5Deals onOpenSettings={() => setChosen('settings')} />}
+        {tab === 'ps5' && <Ps5Deals onOpenSettings={() => goToSettings('github')} />}
 
-        {tab === 'list' && <ListScreen list={list} onOpenSettings={() => setChosen('settings')} />}
+        {tab === 'list' && <ListScreen list={list} onOpenSettings={() => goToSettings()} />}
 
         {tab === 'settings' && (
-          <Settings theme={theme} onTheme={setTheme} hiddenTabs={hidden} onToggleTab={toggleTab} list={list} deals={state} />
+          <Settings
+            page={settingsPage}
+            onPage={openSettingsPage}
+            theme={theme}
+            onTheme={setTheme}
+            hiddenTabs={hidden}
+            onToggleTab={toggleTab}
+            list={list}
+            deals={state}
+          />
         )}
       </main>
 
-      <BottomNav tabs={tabs} tab={tab} onChange={setChosen} listCount={list.items.length} />
+      <BottomNav tabs={tabs} tab={tab} onChange={selectTab} listCount={list.items.length} />
     </div>
   )
 }
