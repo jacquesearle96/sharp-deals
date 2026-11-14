@@ -36,6 +36,7 @@ function Badge({ count, className }: { count: number; className?: string }) {
   if (count <= 0) return null
   return (
     <span
+      aria-label={`, ${count} ${count === 1 ? 'item' : 'items'}`}
       className={cx(
         'grid h-[18px] min-w-[18px] place-items-center rounded-full bg-brand px-1 text-[11px] leading-none font-semibold text-on-brand tabular-nums',
         className,
