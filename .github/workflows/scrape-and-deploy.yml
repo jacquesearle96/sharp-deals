@@ -78,6 +78,8 @@ jobs:
         env:
           STORES_INPUT: ${{ github.event.inputs.stores }}
           TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          # Stores switched off in the app's Settings (a repository variable the app edits).
+          GROCERY_STORES_OFF: ${{ vars.GROCERY_STORES_OFF }}
 
       - name: Save the data branch
         run: |

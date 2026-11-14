@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { SHOP_STORES, STORES, type Product, type StoreId, type StoreRun } from '../../shared/types.ts';
+import { parseOff } from '../../shared/storeSwitches.ts';
+import { DEAL_STORES, SHOP_STORES, STORES, type Product, type StoreId, type StoreRun } from '../../shared/types.ts';
 import type { StoreAdapter } from './adapter.ts';
 import { dropRelativeImages, note, takeNotes } from './diagnostics.ts';
 import { readHistory, updateHistory, writeHistory } from './history.ts';
@@ -40,7 +41,13 @@ const recordHistory = async (store: StoreId, products: Product[]) =>
 // "index" rebuilds the indexes (and records history) from the store files already on disk, without scraping.
 const reindexOnly = process.argv[2] === 'index';
 const only = (reindexOnly ? [] : process.argv.slice(2)).flatMap((a) => GROUPS[a] ?? [a as StoreId]);
-const selected = reindexOnly ? [] : only.length ? ADAPTERS.filter((a) => only.includes(a.store)) : ADAPTERS;
+// Stores switched off in the app's Settings. They are not scraped and their deals are left out of the app,
+// unless a run names them explicitly.
+const off = parseOff(process.env.GROCERY_STORES_OFF, DEAL_STORES).filter((s) => !only.includes(s));
+if (off.length) console.log(`switched off: ${off.join(' ')}`);
+const selected = reindexOnly
+  ? []
+  : ADAPTERS.filter((a) => (only.length ? only.includes(a.store) : true) && !off.includes(a.store));
 
 await mkdir(OUT_DIR, { recursive: true });
 const runs: StoreRun[] = [];
@@ -87,8 +94,8 @@ if (reindexOnly) {
 
 const merged = await mergeRuns(OUT_DIR, runs);
 await writeFile(join(OUT_DIR, 'runs.json'), JSON.stringify(merged, null, 1));
-const index = await buildIndex(OUT_DIR, merged);
+const index = await buildIndex(OUT_DIR, merged, off);
 console.log(`index: ${index.products.length} deals from ${index.runs.filter((r) => r.ok).length} grocery stores`);
-const shopIndex = await buildShopIndex(OUT_DIR, merged);
+const shopIndex = await buildShopIndex(OUT_DIR, merged, off);
 console.log(`shop-index: ${shopIndex.products.length} products from ${shopIndex.runs.filter((r) => r.ok).length} shops`);
 if (runs.some((r) => !r.ok)) process.exitCode = 1;

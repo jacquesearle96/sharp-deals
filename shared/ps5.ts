@@ -46,6 +46,8 @@ export interface Ps5StoreRun {
 export interface Ps5Feed {
   generatedAt: string
   offers: Ps5Offer[]
+  /** Stores switched off in Settings when this was built: not checked, and their consoles left out */
+  off?: Ps5StoreId[]
   runs: Ps5StoreRun[]
 }
 

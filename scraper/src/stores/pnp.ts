@@ -2,6 +2,7 @@ import { effectivePrice, parsePromo } from '../../../shared/promo.ts';
 import { chromium, type Page } from 'playwright';
 import type { Category, Product } from '../../../shared/types.ts';
 import type { StoreAdapter } from '../adapter.ts';
+import { note } from '../diagnostics.ts';
 import { sleep } from '../http.ts';
 import { activeTerms } from '../terms.ts';
 
@@ -11,6 +12,10 @@ const STORE_CODE = 'WC21';
 const PAGE_SIZE = 72;
 const MAX_PAGES_PER_TERM = 5;
 const DELAY_MS = 800;
+/** Tries per search page; each retry starts from a fresh visit to the home page. */
+const TRIES = 3;
+/** After this many search terms fail in a row the site is treating us as blocked, so stop asking. */
+const MAX_FAILED_TERMS_IN_A_ROW = 4;
 
 const FIELDS =
   'products(code,name,price(FULL),images(DEFAULT),available,potentialPromotions(FULL),categoryNames),pagination(DEFAULT)';
@@ -82,25 +87,57 @@ function searchInPage(page: Page, query: string, pageNo: number): Promise<Search
   }, url);
 }
 
+/** Opens the home page so the search requests that follow carry a fresh session. */
+async function openSession(page: Page) {
+  await page.goto('https://www.pnp.co.za/', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(3000);
+}
+
+/**
+ * One search page, retried on a fresh session. PnP's search API now and then answers a request it accepted a
+ * moment earlier with a 400 (an expired session, it seems), so one bad answer must not throw away the whole store.
+ */
+async function searchWithRetry(page: Page, query: string, pageNo: number): Promise<SearchResponse> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await searchInPage(page, query, pageNo);
+    } catch (err) {
+      if (attempt >= TRIES) throw err;
+      await sleep(DELAY_MS * 4 * attempt);
+      await openSession(page).catch(() => {});
+    }
+  }
+}
+
 export const pnp: StoreAdapter = {
   store: 'pnp',
   async run() {
     const scrapedAt = new Date().toISOString();
     const byId = new Map<string, Product>();
     const browser = await chromium.launch();
+    let failedInARow = 0;
     try {
       const page = await browser.newPage();
-      await page.goto('https://www.pnp.co.za/', { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(3000);
+      await openSession(page);
       for (const term of activeTerms) {
-        for (let pageNo = 0; pageNo < MAX_PAGES_PER_TERM; pageNo++) {
-          const res = await searchInPage(page, term, pageNo);
-          for (const raw of res.products ?? []) {
-            const p = mapProduct(raw, scrapedAt);
-            if (p) byId.set(p.id, p);
+        try {
+          for (let pageNo = 0; pageNo < MAX_PAGES_PER_TERM; pageNo++) {
+            const res = await searchWithRetry(page, term, pageNo);
+            for (const raw of res.products ?? []) {
+              const p = mapProduct(raw, scrapedAt);
+              if (p) byId.set(p.id, p);
+            }
+            await sleep(DELAY_MS);
+            if (pageNo + 1 >= (res.pagination?.totalPages ?? 0)) break;
           }
-          await sleep(DELAY_MS);
-          if (pageNo + 1 >= (res.pagination?.totalPages ?? 0)) break;
+          failedInARow = 0;
+        } catch (err) {
+          // Keep what this term already found and move on to the next one.
+          note(`search "${term}" failed after ${TRIES} tries: ${String(err).split('\n')[0]}`);
+          if (++failedInARow >= MAX_FAILED_TERMS_IN_A_ROW) {
+            note(`stopped after ${failedInARow} search terms failed in a row`);
+            break;
+          }
         }
       }
     } finally {

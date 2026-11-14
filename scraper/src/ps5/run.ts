@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isPs5Console, PS5_STORES, sortOffers, type Ps5Feed, type Ps5Offer, type Ps5StoreRun } from '../../../shared/ps5.ts';
+import { parseOff } from '../../../shared/storeSwitches.ts';
 import { SOURCES } from './sources.ts';
 
 /**
@@ -15,7 +16,11 @@ const previous: Ps5Feed = await readFile(OUT, 'utf8')
   .catch(() => ({ generatedAt: '', offers: [], runs: [] }));
 
 const only = process.argv.slice(2);
-const selected = only.length ? SOURCES.filter((s) => only.includes(s.store)) : SOURCES;
+const ALL = Object.keys(PS5_STORES) as (keyof typeof PS5_STORES)[];
+// Stores switched off in the app's Settings: not checked, and their consoles left out (unless named on the command line).
+const off = parseOff(process.env.PS5_STORES_OFF, ALL).filter((s) => !only.includes(s));
+if (off.length) console.log(`switched off: ${off.join(' ')}`);
+const selected = SOURCES.filter((s) => (only.length ? only.includes(s.store) : true) && !off.includes(s.store));
 
 // Each store is a different site, so they are read side by side; each reader is polite within its own site.
 const results = await Promise.all(
@@ -47,8 +52,12 @@ const results = await Promise.all(
 const ran = new Set(selected.map((s) => s.store));
 const feed: Ps5Feed = {
   generatedAt: new Date().toISOString(),
-  offers: sortOffers([...previous.offers.filter((o) => !ran.has(o.store)), ...results.flatMap((r) => r.offers)]),
-  runs: (Object.keys(PS5_STORES) as (keyof typeof PS5_STORES)[]).flatMap((store) => {
+  offers: sortOffers([
+    ...previous.offers.filter((o) => !ran.has(o.store) && !off.includes(o.store)),
+    ...results.flatMap((r) => r.offers),
+  ]),
+  off,
+  runs: ALL.flatMap((store) => {
     const run = results.find((r) => r.run.store === store)?.run ?? previous.runs.find((r) => r.store === store);
     return run ? [run] : [];
   }),

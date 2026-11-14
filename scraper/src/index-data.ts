@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { isDeal } from '../../shared/promo.ts';
 import { readHistory, stats } from './history.ts';
-import { DEAL_STORES, SHOP_STORES, STORES, type DealIndex, type DealProduct, type PriceStats, type Product, type StoreRun } from '../../shared/types.ts';
+import { DEAL_STORES, SHOP_STORES, STORES, type DealIndex, type DealProduct, type PriceStats, type Product, type StoreId, type StoreRun } from '../../shared/types.ts';
 
 export const today = () => new Date().toISOString().slice(0, 10);
 
@@ -35,24 +35,29 @@ const readJson = async <T>(path: string): Promise<T | undefined> => {
 };
 
 /** Merges the grocery and baby-shop specials into the one compact deals-only index the main tabs load. */
-export async function buildIndex(dir: string, runs: StoreRun[]): Promise<DealIndex> {
+export async function buildIndex(dir: string, runs: StoreRun[], off: StoreId[] = []): Promise<DealIndex> {
   const products: DealProduct[] = [];
-  for (const store of DEAL_STORES) {
+  for (const store of DEAL_STORES.filter((s) => !off.includes(s))) {
     const items = await readJson<Product[]>(join(dir, `${store}.json`));
     if (items) {
       const history = await readHistory(dir, store);
       products.push(...items.filter(isDeal).map((p) => toDeal(p, stats(history[p.id], today()))));
     }
   }
-  const index: DealIndex = { generatedAt: new Date().toISOString(), runs: runs.filter((r) => DEAL_STORES.includes(r.store)), products };
+  const index: DealIndex = {
+    generatedAt: new Date().toISOString(),
+    runs: runs.filter((r) => DEAL_STORES.includes(r.store)),
+    off: off.filter((s) => DEAL_STORES.includes(s)),
+    products,
+  };
   await writeFile(join(dir, 'index.json'), JSON.stringify(index));
   return index;
 }
 
 /** Merges the baby and tech shops into shop-index.json. Unlike groceries, every product is kept so any search can find it. */
-export async function buildShopIndex(dir: string, runs: StoreRun[]): Promise<DealIndex> {
+export async function buildShopIndex(dir: string, runs: StoreRun[], off: StoreId[] = []): Promise<DealIndex> {
   const products: DealProduct[] = [];
-  for (const store of SHOP_STORES) {
+  for (const store of SHOP_STORES.filter((s) => !off.includes(s))) {
     const items = await readJson<Product[]>(join(dir, `${store}.json`));
     if (items) {
       const history = await readHistory(dir, store);

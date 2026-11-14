@@ -84,5 +84,7 @@ export interface DealProduct extends Omit<Product, 'scrapedAt'> {
 export interface DealIndex {
   generatedAt: string;
   runs: StoreRun[];
+  /** Stores switched off in Settings when this was built: not scraped, and their deals left out */
+  off?: StoreId[];
   products: DealProduct[];
 }
