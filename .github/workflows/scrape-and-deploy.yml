@@ -52,6 +52,14 @@ jobs:
           else
             echo "No data branch yet: starting fresh."
           fi
+          # Stores whose sites refuse GitHub's servers are scraped by a Claude Code scheduled task
+          # (scraper/scrape-elsewhere.sh), which pushes its results to the data-elsewhere branch.
+          if git ls-remote --exit-code --heads origin data-elsewhere >/dev/null 2>&1; then
+            git fetch --depth=1 origin data-elsewhere
+            mkdir -p "$RUNNER_TEMP/elsewhere"
+            git archive FETCH_HEAD | tar -x -C "$RUNNER_TEMP/elsewhere"
+            node scraper/src/elsewhere.ts apply "$RUNNER_TEMP/elsewhere" app/public/data
+          fi
 
       - name: Install scraper and browser
         run: |
@@ -80,6 +88,8 @@ jobs:
           TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
           # Stores switched off in the app's Settings (a repository variable the app edits).
           GROCERY_STORES_OFF: ${{ vars.GROCERY_STORES_OFF }}
+          # Their sites refuse GitHub's servers; a scheduled task scrapes them instead (see the restore step).
+          SCRAPED_ELSEWHERE: checkers foodlovers
 
       - name: Save the data branch
         run: |

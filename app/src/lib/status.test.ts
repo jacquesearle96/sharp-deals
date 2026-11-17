@@ -40,6 +40,9 @@ describe('staleStores', () => {
     ]
     expect([...staleStores(runs, [], now)]).toEqual([['checkers', '2026-11-12T07:31:00Z']])
   })
+  it('also lists a store that simply stopped being scraped', () => {
+    expect([...staleStores([{ store: 'foodlovers', ok: true, count: 113, at: '2026-11-12T17:00:00Z' }], [], now).keys()]).toEqual(['foodlovers'])
+  })
   it('ignores switched-off stores', () => {
     expect(staleStores([{ store: 'checkers', ...blocked }], ['checkers'], now).size).toBe(0)
   })

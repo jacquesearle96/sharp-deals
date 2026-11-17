@@ -45,9 +45,14 @@ const only = (reindexOnly ? [] : process.argv.slice(2)).flatMap((a) => GROUPS[a]
 // unless a run names them explicitly.
 const off = parseOff(process.env.GROCERY_STORES_OFF, DEAL_STORES).filter((s) => !only.includes(s));
 if (off.length) console.log(`switched off: ${off.join(' ')}`);
+// Stores scraped somewhere else (a Claude Code scheduled task; see scrape-elsewhere.sh), because their sites refuse
+// GitHub's servers. Their results arrive on the data-elsewhere branch. Skipped here unless named one by one.
+const named = process.argv.slice(2);
+const elsewhere = parseOff(process.env.SCRAPED_ELSEWHERE, DEAL_STORES).filter((s) => !named.includes(s));
+if (elsewhere.length && !reindexOnly) console.log(`scraped elsewhere: ${elsewhere.join(' ')}`);
 const selected = reindexOnly
   ? []
-  : ADAPTERS.filter((a) => (only.length ? only.includes(a.store) : true) && !off.includes(a.store));
+  : ADAPTERS.filter((a) => (only.length ? only.includes(a.store) : true) && !off.includes(a.store) && !elsewhere.includes(a.store));
 
 await mkdir(OUT_DIR, { recursive: true });
 const runs: StoreRun[] = [];
