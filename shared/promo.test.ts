@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { effectivePrice, isDeal, isMultiBuy, parsePromo, promoLabel } from './promo.ts';
+import { effectivePrice, hasEnded, isDeal, isMultiBuy, parsePromo, promoLabel } from './promo.ts';
 
 describe('parsePromo', () => {
   it('parses "3 for 2"', () => {
@@ -95,5 +95,14 @@ describe('helpers', () => {
   it('labels deals', () => {
     expect(promoLabel(parsePromo('3 for 2'))).toBe('3 for 2');
     expect(promoLabel(parsePromo('2 for R50'))).toBe('2 for R50');
+  });
+});
+
+describe('hasEnded', () => {
+  it('is true only once the end date is before today', () => {
+    expect(hasEnded('2026-11-16', '2026-11-17')).toBe(true);
+    expect(hasEnded('2026-11-17', '2026-11-17')).toBe(false);
+    expect(hasEnded('2026-11-16T21:59:59.000Z', '2026-11-17')).toBe(true);
+    expect(hasEnded(undefined, '2026-11-17')).toBe(false);
   });
 });

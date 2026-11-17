@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { isDeal } from '../../shared/promo.ts';
+import { hasEnded, isDeal } from '../../shared/promo.ts';
 import { readHistory, stats } from './history.ts';
 import { DEAL_STORES, SHOP_STORES, STORES, type DealIndex, type DealProduct, type PriceStats, type Product, type StoreId, type StoreRun } from '../../shared/types.ts';
 
@@ -41,7 +41,9 @@ export async function buildIndex(dir: string, runs: StoreRun[], off: StoreId[] =
     const items = await readJson<Product[]>(join(dir, `${store}.json`));
     if (items) {
       const history = await readHistory(dir, store);
-      products.push(...items.filter(isDeal).map((p) => toDeal(p, stats(history[p.id], today()))));
+      // A store whose scrape keeps failing still has its old file; leave out the specials that have ended since.
+      const live = items.filter((p) => isDeal(p) && !hasEnded(p.promoEnds, today()));
+      products.push(...live.map((p) => toDeal(p, stats(history[p.id], today()))));
     }
   }
   const index: DealIndex = {

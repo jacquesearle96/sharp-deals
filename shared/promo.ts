@@ -84,6 +84,9 @@ export function effectivePrice(price: number, promo: Promo): number {
 export const isDeal = (p: { promo: Promo; price: number; wasPrice?: number }) =>
   p.promo.kind !== 'none' || (p.wasPrice !== undefined && p.wasPrice > p.price);
 
+/** True once a special's end date (YYYY-MM-DD or a full timestamp) is before today (YYYY-MM-DD). */
+export const hasEnded = (promoEnds: string | undefined, today: string) => promoEnds !== undefined && promoEnds.slice(0, 10) < today;
+
 export const isMultiBuy = (promo: Promo) =>
   (promo.kind === 'free' || promo.kind === 'price' || promo.kind === 'save' || promo.kind === 'percent') &&
   promo.qty > 1;

@@ -2,7 +2,7 @@ import { ArrowUpRight, Check, ChartLine, Plus, ShoppingCart } from 'lucide-react
 import { useState } from 'react'
 import { isMultiBuy, promoLabel } from '../../../shared/promo.ts'
 import type { DealProduct } from '../../../shared/types.ts'
-import { endsLabel, money, startsLabel } from '../lib/format.ts'
+import { endsLabel, money, shortDate, startsLabel } from '../lib/format.ts'
 import { safeLink } from '../lib/link.ts'
 import { STORE_INFO } from '../lib/stores.ts'
 import { verdicts } from '../lib/verdict.ts'
@@ -13,11 +13,13 @@ interface Props {
   deal: DealProduct
   inList: boolean
   onToggle: (deal: DealProduct) => void
+  /** When this store's data is from, if its latest scrapes failed and it is old */
+  staleSince?: string
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-export function DealCard({ deal, inList, onToggle }: Props) {
+export function DealCard({ deal, inList, onToggle, staleSince }: Props) {
   const [showHistory, setShowHistory] = useState(false)
   const store = STORE_INFO[deal.store]
   const multi = isMultiBuy(deal.promo)
@@ -49,6 +51,7 @@ export function DealCard({ deal, inList, onToggle }: Props) {
             <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: store.color }} />
             <span className="font-medium text-ink/80">{store.name}</span>
             {upcoming ? <span className="text-info">· {upcoming}</span> : ends && <span>· {ends}</span>}
+            {staleSince && <span className="text-warn">· Price from {shortDate(staleSince)}</span>}
           </p>
 
           <h3 className="mt-1 line-clamp-2 text-[15px] leading-snug">

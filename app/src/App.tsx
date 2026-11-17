@@ -1,5 +1,6 @@
 import { ChevronLeft, ShoppingBasket, Sparkles, Users } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { hasEnded } from '../../shared/promo.ts'
 import type { DealProduct, StoreId } from '../../shared/types.ts'
 import { BottomNav, TABS, TopNav, type Tab } from './components/BottomNav.tsx'
 import { DealCard } from './components/DealCard.tsx'
@@ -8,12 +9,13 @@ import { FilterBar } from './components/FilterBar.tsx'
 import { Ps5Deals } from './components/Ps5Deals.tsx'
 import { Settings, SETTINGS_TITLES, type SettingsPage } from './components/Settings.tsx'
 import { ShopAround } from './components/ShopAround.tsx'
-import { Button, Card, cx, Empty } from './components/ui.tsx'
+import { Button, Card, cx, Empty, Notice } from './components/ui.tsx'
 import { useDeals, useShopIndex, type Freshness } from './lib/data.ts'
-import { ago, money } from './lib/format.ts'
+import { ago, localToday, money, shortDate } from './lib/format.ts'
 import { useShoppingList } from './lib/list.ts'
 import { useHiddenTabs, useTheme } from './lib/prefs.ts'
 import { queryDeals, type Filters } from './lib/query.ts'
+import { staleStores } from './lib/status.ts'
 import { STORE_INFO } from './lib/stores.ts'
 
 const SEARCH_DEFAULTS: Filters = { text: '', stores: [], multiBuyOnly: false, sort: 'relevance' }
@@ -66,7 +68,13 @@ export default function App() {
     window.scrollTo({ top: 0 })
   }, [tab, settingsPage])
 
-  const products = useMemo(() => (state.status === 'ready' ? state.index.products : []), [state])
+  // The saved copy can be days old (offline, or a store that keeps failing), so leave out specials that have ended.
+  const products = useMemo(() => {
+    if (state.status !== 'ready') return []
+    const today = localToday()
+    return state.index.products.filter((p) => !hasEnded(p.promoEnds, today))
+  }, [state])
+  const stale = useMemo(() => (state.status === 'ready' ? staleStores(state.index.runs, state.index.off) : new Map<StoreId, string>()), [state])
   const counts = useMemo(() => {
     const c: Partial<Record<StoreId, number>> = {}
     for (const p of products) c[p.store] = (c[p.store] ?? 0) + 1
@@ -118,8 +126,10 @@ export default function App() {
 
         {state.status === 'ready' && tab === 'search' && (
           <WithSidebar sidebar={<FilterBar filters={search} onChange={setSearch} counts={counts} />}>
+            <StaleNotice stale={stale} stores={search.stores} onDetails={() => goToSettings('grocery')} />
             <DealList
               deals={searchResults}
+              stale={stale}
               has={list.has}
               onToggle={list.toggle}
               empty={search.text ? `No deals found for “${search.text}”` : 'No deals match these filters'}
@@ -136,7 +146,8 @@ export default function App() {
               </>
             }
           >
-            <DealList deals={topResults} has={list.has} onToggle={list.toggle} empty="No multi-buy deals match these filters" />
+            <StaleNotice stale={stale} stores={top.stores} onDetails={() => goToSettings('grocery')} />
+            <DealList deals={topResults} stale={stale} has={list.has} onToggle={list.toggle} empty="No multi-buy deals match these filters" />
           </WithSidebar>
         )}
 
@@ -184,6 +195,24 @@ function DataAge({ generatedAt, freshness }: { generatedAt: string; freshness: F
       <span aria-hidden className={cx('h-2 w-2 rounded-full', dot)} />
       {text}
     </p>
+  )
+}
+
+/** Names the stores whose deals are old because their scrape keeps failing. Only stores the filter includes. */
+function StaleNotice({ stale, stores, onDetails }: { stale: Map<StoreId, string>; stores: StoreId[]; onDetails: () => void }) {
+  const shown = [...stale].filter(([s]) => stores.length === 0 || stores.includes(s))
+  if (shown.length === 0) return null
+  const names = shown.map(([s, at]) => `${STORE_INFO[s].name} since ${shortDate(at)}`)
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+  return (
+    <div className="mb-3">
+      <Notice tone="warn">
+        Couldn’t update {list}, so {shown.length === 1 ? 'its' : 'their'} prices may have changed.{' '}
+        <button type="button" onClick={onDetails} className="font-medium underline underline-offset-2">
+          Details
+        </button>
+      </Notice>
+    </div>
   )
 }
 

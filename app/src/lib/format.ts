@@ -14,6 +14,15 @@ export function endsLabel(promoEnds: string | undefined): string | undefined {
   return Number.isNaN(d.getTime()) ? undefined : `Ends ${short.format(d).replace(/^0/, '')}`
 }
 
+/** "12 Nov" */
+export const shortDate = (iso: string) => short.format(new Date(iso)).replace(/^0/, '')
+
+/** Today's date (YYYY-MM-DD) where the app is being used, to compare with promo end dates. */
+export function localToday(now = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
 /** "Starts Fri 30 Oct" for a promo that has not begun yet. */
 export function startsLabel(promoStarts: string | undefined, now = new Date()): string | undefined {
   if (!promoStarts) return undefined
