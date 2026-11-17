@@ -1,0 +1,29 @@
+name: Probe leaflet sites (temporary)
+
+# TEMPORARY: checks whether leaflet sites answer GitHub's runners or show a bot check. Delete after use.
+on:
+  push:
+    branches: [claude/cool-heisenberg-c9deei]
+    paths: [.github/workflows/probe-leaflet.yml]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch one page per site
+        run: |
+          probe() {
+            code=$(curl -sS -L -o page.html -w '%{http_code}' --max-time 30 -A "$2" "$1" || echo ERR)
+            title=$(grep -o '<title>[^<]*' page.html | head -1)
+            offers=$(grep -o 'js-offer-link-item' page.html | wc -l)
+            prices=$(grep -oE 'R ?[0-9]+[.,][0-9]{2}' page.html | wc -l)
+            echo "$code | $title | offers=$offers prices=$prices | UA=${2:0:20} | $1"
+            sleep 3
+          }
+          for ua in "curl/8" "sharp-deals personal price tracker"; do
+            probe "https://www.cataloguespecials.co.za/stores/checkers/specials" "$ua"
+            probe "https://www.cataloguespecials.co.za/stores/checkers/specials?page=2" "$ua"
+          done
+          probe "https://www.tiendeo.co.za/johannesburg/checkers" "curl/8"
+          probe "https://www.checkers.co.za/" "curl/8"
