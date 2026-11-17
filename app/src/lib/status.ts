@@ -40,3 +40,19 @@ export function failureReason(run: Pick<RunLike, 'error' | 'notes'>): string {
   if (/no products|no .*found|layout may have changed/i.test(text)) return 'No products found'
   return 'Latest run failed'
 }
+
+/** A store's data older than this is called out on the deals screens (stores are scraped every 6 to 12 hours). */
+export const STALE_STORE_HOURS = 24
+
+/**
+ * Stores whose deals on screen are old, mapped to when their data is from: their scrape keeps failing, or (for stores
+ * scraped outside GitHub) stopped running. A single missed run is normal; only data older than STALE_STORE_HOURS counts.
+ */
+export function staleStores<S extends string>(runs: (RunLike & { store: S })[], off: string[] = [], now = new Date()): Map<S, string> {
+  const stale = new Map<S, string>()
+  for (const r of runs) {
+    if (!r.at || off.includes(r.store)) continue
+    if (now.getTime() - Date.parse(r.at) > STALE_STORE_HOURS * 3_600_000) stale.set(r.store, r.at)
+  }
+  return stale
+}

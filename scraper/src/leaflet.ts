@@ -1,9 +1,8 @@
-import { chromium, type Page } from 'playwright';
 import { effectivePrice, isMultiBuy, parsePromo } from '../../shared/promo.ts';
 import type { Product, Promo, StoreId } from '../../shared/types.ts';
 import type { StoreAdapter } from './adapter.ts';
-import { describePage, note } from './diagnostics.ts';
-import { sleep } from './http.ts';
+import { note } from './diagnostics.ts';
+import { sleep, UA } from './http.ts';
 
 /**
  * Leaflet aggregator cataloguespecials.co.za lists item-level specials per store (robots.txt allows these pages).
@@ -86,37 +85,62 @@ export function keepUnexpired(previous: Product[], fresh: Product[], today: stri
   return previous.filter((p) => !seen.has(p.id) && p.promoEnds !== undefined && p.promoEnds.slice(0, 10) >= today);
 }
 
-const readCards = (page: Page): Promise<CardText[]> =>
-  page.evaluate(() =>
-    [...document.querySelectorAll<HTMLAnchorElement>('a.js-offer-link-item')].map((a) => ({
-      lines: a.innerText.split('\n'),
-      href: a.getAttribute('href') ?? '',
-      // The card also holds the store logo and UI icons; the product shot lives under /uploads/offers/.
-      image: a.querySelector('img[src*="/uploads/offers/"]')?.getAttribute('src') ?? undefined,
-    })),
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const decode = (s: string) =>
+  s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) =>
+    e[0] === '#' ? String.fromCodePoint(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : +e.slice(1)) : (ENTITIES[e.toLowerCase()] ?? m),
   );
+
+/**
+ * Offer cards from a listing page's HTML (the site renders them on the server, so no browser is needed).
+ * Each card's text pieces become its lines, in page order, like the card's innerText.
+ */
+export function parseCards(html: string): CardText[] {
+  const cards: CardText[] = [];
+  for (const m of html.matchAll(/<a\b[^>]*class="[^"]*\bjs-offer-link-item\b[^"]*"[^>]*>([\s\S]*?)<\/a>/g)) {
+    const href = decode(m[0].match(/\bhref="([^"]*)"/)?.[1] ?? '');
+    const inner = m[1].replace(/<(script|style|button)\b[\s\S]*?<\/\1>/gi, '');
+    const lines = inner
+      .split(/<[^>]*>/)
+      .map((t) => decode(t).replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    // The card also holds the store logo and UI icons; the product shot lives under /uploads/offers/.
+    const image = inner.match(/<img\b[^>]*\bsrc="([^"]*\/uploads\/offers\/[^"]*)"/)?.[1];
+    cards.push({ lines, href, image: image && decode(image) });
+  }
+  return cards;
+}
 
 /** True when the site answered "this page does not exist", which is how it marks the end of a store's listing. */
 export const isNotFound = (status: number | undefined, title: string) => status === 404 || /^not found\b/i.test(title.trim());
 
+const titleOf = (html: string) => decode(html.match(/<title[^>]*>([^<]*)/i)?.[1] ?? '').trim();
+
 /**
  * Opens one listing page, trying again (with a growing pause) when the offers do not show.
- * Returns 'end' when the page does not exist (past the last page), or null when it never loaded properly.
+ * Returns 'end' when the page does not exist (past the last page), or a description of the problem when it never loaded properly.
  */
-async function loadPage(page: Page, url: string): Promise<CardText[] | 'end' | null> {
+async function loadPage(url: string): Promise<CardText[] | 'end' | { problem: string }> {
+  let problem = '';
   for (let attempt = 1; attempt <= PAGE_ATTEMPTS; attempt++) {
     try {
-      const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45_000 });
-      if (isNotFound(response?.status(), await page.title())) return 'end';
-      if (await page.waitForSelector('a.js-offer-link-item', { timeout: 20_000 }).then(() => true, () => false)) {
-        return await readCards(page);
-      }
-    } catch {
-      // A navigation timeout or dropped connection: try again below.
+      const res = await fetch(url, {
+        headers: { 'User-Agent': UA, Accept: 'text/html,application/xhtml+xml' },
+        signal: AbortSignal.timeout(45_000),
+      });
+      const html = await res.text();
+      const title = titleOf(html);
+      if (isNotFound(res.status, title)) return 'end';
+      const cards = parseCards(html);
+      if (cards.length) return cards;
+      // e.g. a bot check: 202/403 with a "Just a moment..." page
+      problem = `HTTP ${res.status}, title "${title}", ${html.length} bytes at ${url}`;
+    } catch (err) {
+      problem = `${String(err).slice(0, 120)} at ${url}`;
     }
     if (attempt < PAGE_ATTEMPTS) await sleep(attempt * 5000);
   }
-  return null;
+  return { problem };
 }
 
 /** An adapter for one store's page on the aggregator, e.g. slug "checkers" or "food-lover-s-market". */
@@ -127,33 +151,27 @@ export const createLeafletAdapter = (store: StoreId, slug: string): StoreAdapter
     const LISTING = `${ORIGIN}/stores/${slug}/specials`;
     const scrapedAt = new Date().toISOString();
     const byId = new Map<string, Product>();
-    const browser = await chromium.launch();
-    try {
-      const page = await browser.newPage();
-      let failedInARow = 0;
-      for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
-        const cards = await loadPage(page, `${LISTING}?page=${pageNo}`);
-        if (cards === 'end') break;
-        if (!cards) {
-          // One slow or blocked page must not end the run: earlier this silently cut the listing short.
-          note(`page ${pageNo} showed no offers after ${PAGE_ATTEMPTS} tries: ${await describePage(page)}`);
-          if (++failedInARow >= MAX_FAILED_PAGES) break;
-          continue;
-        }
-        failedInARow = 0;
-        let added = 0;
-        for (const card of cards) {
-          const p = mapLeafletCard(card, store, scrapedAt);
-          if (p && !byId.has(p.id)) {
-            byId.set(p.id, p);
-            added++;
-          }
-        }
-        if (added === 0) break;
-        await sleep(DELAY_MS);
+    let failedInARow = 0;
+    for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
+      const cards = await loadPage(`${LISTING}?page=${pageNo}`);
+      if (cards === 'end') break;
+      if (!Array.isArray(cards)) {
+        // One slow or blocked page must not end the run: earlier this silently cut the listing short.
+        note(`page ${pageNo} showed no offers after ${PAGE_ATTEMPTS} tries: ${cards.problem}`);
+        if (++failedInARow >= MAX_FAILED_PAGES) break;
+        continue;
       }
-    } finally {
-      await browser.close();
+      failedInARow = 0;
+      let added = 0;
+      for (const card of cards) {
+        const p = mapLeafletCard(card, store, scrapedAt);
+        if (p && !byId.has(p.id)) {
+          byId.set(p.id, p);
+          added++;
+        }
+      }
+      if (added === 0) break;
+      await sleep(DELAY_MS);
     }
     return [...byId.values()];
   },

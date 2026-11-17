@@ -19,6 +19,15 @@ A GitHub Actions workflow (`scrape-and-deploy.yml`) runs every 6 hours:
 
 Price history builds up run by run. Verdict tags such as "Lowest in 20 days" appear after about a week.
 
+### Stores scraped outside GitHub
+
+Checkers and Food Lover's come from cataloguespecials.co.za, which refuses GitHub's servers (since Nov 2026). A Claude
+Code scheduled task runs `scraper/scrape-elsewhere.sh` at 05:41 and 17:41 UTC, about 40 minutes before a GitHub run.
+The script scrapes those stores and pushes their results to the `data-elsewhere` branch. The workflow copies that branch
+into the data before every run and skips those stores itself (`SCRAPED_ELSEWHERE` in the workflow). To move a store
+back to GitHub, take it out of `SCRAPED_ELSEWHERE` and out of `STORES` in the script. If the task stops, the app warns
+that their prices are more than a day old.
+
 ## One-time setup
 
 1. **Create the repository.** On github.com click **New repository**, name it `sharp-deals`, set it to **Public**
@@ -79,8 +88,7 @@ Open the Pages address in **Safari**, tap **Share**, then **Add to Home Screen**
 
 Open the failed run in **Actions** and read the **Scrape** step. Each store logs its own error. The app keeps
 showing that store's last good data, and **Settings** shows when each store last updated and why its latest run failed.
-Some sites block cloud servers; if that happens to one store you can run its scraper on your own PC instead
-(`cd scraper && node src/run.ts <store>`), then push the result to the `data` branch.
+Some sites block GitHub's servers; such a store can move to the scheduled task (see "Stores scraped outside GitHub").
 
 ## Notes
 
