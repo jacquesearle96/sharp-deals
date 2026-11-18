@@ -22,7 +22,7 @@ export const SETTINGS_TITLES: Record<SettingsPage, string> = {
   main: 'Settings',
   toolbar: 'Customise toolbar',
   grocery: 'Grocery & baby stores',
-  ps5: 'PS5 stores',
+  ps5: 'Console stores',
   github: 'GitHub access',
 }
 
@@ -160,7 +160,7 @@ export function Settings({ page, onPage, theme, onTheme, hiddenTabs, onToggleTab
               <Gamepad2 aria-hidden size={17} />
             </IconTile>
           }
-          title="PS5 stores"
+          title="Console stores"
           detail={<StoresSummary stores={PS5_STORE_LIST} runs={ps5Runs} off={ps5Off} />}
           onClick={() => onPage('ps5')}
         />
@@ -379,7 +379,7 @@ function RunNow({ workflow }: { workflow: Scrape }) {
   )
 }
 
-/** Saves the GitHub token that the store switches, Run now and the PS5 Refresh use. */
+/** Saves the GitHub token that the store switches, Run now and the Consoles Refresh use. */
 function GithubAccess() {
   const { repo, token } = useGithub()
   const [draft, setDraft] = useState('')

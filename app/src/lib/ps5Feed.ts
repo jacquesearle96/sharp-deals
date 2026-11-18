@@ -11,7 +11,7 @@ export function usePs5Feed(enabled = true) {
   const reload = useCallback(async (): Promise<string | undefined> => {
     try {
       const r = await fetch(`${import.meta.env.BASE_URL}data/ps5.json`, { cache: 'no-store' })
-      if (!r.ok) throw new Error(r.status === 404 ? 'No PS5 prices yet: the first run has not finished.' : `Could not load (${r.status})`)
+      if (!r.ok) throw new Error(r.status === 404 ? 'No console prices yet: the first run has not finished.' : `Could not load (${r.status})`)
       const feed = (await r.json()) as Ps5Feed
       setState((cur) => (cur.status === 'ready' && cur.feed.generatedAt === feed.generatedAt ? cur : { status: 'ready', feed }))
       return feed.generatedAt

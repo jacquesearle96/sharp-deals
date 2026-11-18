@@ -1,6 +1,6 @@
-name: PS5 prices (temporary)
+name: Console prices (temporary)
 
-# TEMPORARY (Black Friday 2026): checks PS5 console prices every hour and redeploys the app.
+# TEMPORARY (Black Friday 2026): checks PS5 and Xbox Series console prices every hour and redeploys the app.
 # The schedule only fires in November, so it stops by itself after Cyber Monday. Delete this file afterwards.
 on:
   schedule:
@@ -46,7 +46,7 @@ jobs:
           npx playwright install --with-deps chromium
         working-directory: scraper
 
-      - name: Check PS5 prices
+      - name: Check console prices
         id: ps5
         # A store that fails keeps its last prices, so carry on and publish the rest.
         continue-on-error: true
@@ -84,9 +84,9 @@ jobs:
         with:
           path: app/dist
 
-      - name: Report PS5 problems
+      - name: Report console price problems
         if: steps.ps5.outcome == 'failure'
-        run: echo "::warning::At least one store failed. The PS5 page shows its last prices. See the Check PS5 prices step."
+        run: echo "::warning::At least one store failed. The Consoles tab shows its last prices. See the Check console prices step."
 
   deploy:
     needs: ps5-build

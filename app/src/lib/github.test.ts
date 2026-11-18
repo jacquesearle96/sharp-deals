@@ -21,6 +21,6 @@ describe('run status', () => {
   })
   it('explains a queued run waiting for the other scrape', () => {
     expect(describeRun(run('queued'), 'ps5')).toMatch(/grocery scrape/)
-    expect(describeRun(run('queued'), 'grocery')).toMatch(/PS5 check/)
+    expect(describeRun(run('queued'), 'grocery')).toMatch(/console price check/)
   })
 })

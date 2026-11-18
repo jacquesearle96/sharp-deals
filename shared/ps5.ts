@@ -1,5 +1,6 @@
 /**
- * TEMPORARY (Black Friday 2026): PlayStation 5 console prices from South African stores.
+ * TEMPORARY (Black Friday 2026): PS5 and Xbox Series S/X console prices from South African stores
+ * (shown on the Consoles tab; the code keeps its original "ps5" names).
  * Everything PS5-related lives in shared/ps5.ts, scraper/src/ps5/, app/src/components/Ps5Deals.tsx
  * and .github/workflows/ps5.yml, so it can be deleted in one go afterwards.
  */
@@ -51,24 +52,30 @@ export interface Ps5Feed {
   runs: Ps5StoreRun[]
 }
 
-/** Cheapest real console in South Africa is well above this; accessories and games are well below. */
-const MIN_PRICE = 7000
+/** The cheapest real consoles in South Africa are well above these; accessories and games are well below. */
+const MIN_PRICE = { ps5: 7000, xbox: 6000 }
 const MAX_PRICE = 60000
 
 const PS5 = /\b(?:ps ?5|playstation(?: ?5)?)\b/i
+const XBOX_SERIES = /\bxbox\b.*\bseries ?[sx]\b|\bseries ?[sx]\b.*\bxbox\b/i
 
 /**
- * Words that mean the listing is not a new PS5 console: other consoles, add-ons that cost as much as one
- * (VR2, Portal, racing wheels), second-hand stock, and cosmetic extras.
+ * Words that mean the listing is not a new console: add-ons that cost as much as one (VR2, Portal, racing wheels,
+ * storage), second-hand stock, cosmetic extras, and accessories "compatible with" a console.
  */
 const NOT_A_CONSOLE =
-  /\b(?:ps ?[1-4]|playstation ?[1-4]|vr ?2?|portal|remote player|pre[- ]?owned|refurbished|renewed|used|second[- ]?hand|skin|decal|cover|stand|wheel|pedals?|headset|monitor|tv|chair|desk|xbox|switch|steam deck|nvme|hard ?(?:dis[ck] )?drive|harddrive)\b/i
+  /\b(?:vr ?2?|portal|remote player|pre[- ]?owned|refurbished|renewed|used|second[- ]?hand|skin|decal|cover|stand|wheel|pedals?|headset|monitor|tv|chair|desk|steam deck|nvme|hard ?(?:dis[ck] )?drive|harddrive|compatible|expansion|storage card)\b/i
+/** Other consoles named in a PS5 listing, and vice versa. */
+const OTHER_THAN_PS5 = /\b(?:ps ?[1-4]|playstation ?[1-4]|xbox|switch)\b/i
+const OTHER_THAN_XBOX = /\b(?:xbox one|xbox 360|ally|switch|ps ?\d|playstation)\b/i
 
-/** Whether a listing looks like a new PS5 console (alone or in a bundle) rather than a game or accessory. */
-export function isPs5Console(name: string, price: number): boolean {
-  if (!(price >= MIN_PRICE && price <= MAX_PRICE)) return false
+/** Whether a listing looks like a new PS5 or Xbox Series S/X console (alone or in a bundle), not a game or accessory. */
+export function isConsole(name: string, price: number): boolean {
+  if (!(price <= MAX_PRICE)) return false
   const clean = name.replace(/[®™]/g, '')
-  return PS5.test(clean) && !NOT_A_CONSOLE.test(clean)
+  if (NOT_A_CONSOLE.test(clean)) return false
+  if (XBOX_SERIES.test(clean)) return price >= MIN_PRICE.xbox && !OTHER_THAN_XBOX.test(clean)
+  return price >= MIN_PRICE.ps5 && PS5.test(clean) && !OTHER_THAN_PS5.test(clean)
 }
 
 /** Cheapest first; in-stock offers before out-of-stock ones at the same price. */
@@ -76,11 +83,13 @@ export function sortOffers(offers: Ps5Offer[]): Ps5Offer[] {
   return [...offers].sort((a, b) => a.price - b.price || Number(b.inStock !== false) - Number(a.inStock !== false))
 }
 
-export type Ps5Model = 'digital' | 'disc' | 'pro'
+export type Ps5Model = 'ps5-digital' | 'ps5-disc' | 'ps5-pro' | 'series-s' | 'series-x'
 
 /** Best guess at the model from the listing name; stores word these inconsistently. */
 export function modelOf(name: string): Ps5Model {
-  if (/\bpro\b/i.test(name)) return 'pro'
-  if (/digital|\bdig\b/i.test(name)) return 'digital'
-  return 'disc'
+  const clean = name.replace(/[®™]/g, '')
+  if (XBOX_SERIES.test(clean)) return /\bseries ?x\b/i.test(clean) ? 'series-x' : 'series-s'
+  if (/\bpro\b/i.test(clean)) return 'ps5-pro'
+  if (/digital|\bdig\b/i.test(clean)) return 'ps5-digital'
+  return 'ps5-disc'
 }

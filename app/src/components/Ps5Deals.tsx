@@ -9,7 +9,7 @@ import { daysToBlackFriday } from '../lib/retailers.ts'
 import { Button, Card, cx, Empty, Segmented } from './ui.tsx'
 
 /**
- * TEMPORARY (Black Friday 2026): every PS5 console listing from the SA stores we read, cheapest first.
+ * TEMPORARY (Black Friday 2026): every PS5 and Xbox Series S/X listing from the SA stores we read, cheapest first.
  * Delete this file, its tab in BottomNav/App, lib/ps5Feed.ts, shared/ps5.ts, scraper/src/ps5/ and
  * .github/workflows/ps5.yml afterwards.
  */
@@ -18,9 +18,11 @@ type Model = 'all' | Ps5Model
 
 const MODELS: { id: Model; label: string }[] = [
   { id: 'all', label: 'All' },
-  { id: 'digital', label: 'Digital' },
-  { id: 'disc', label: 'Disc' },
-  { id: 'pro', label: 'Pro' },
+  { id: 'ps5-digital', label: 'PS5 Digital' },
+  { id: 'ps5-disc', label: 'PS5 Disc' },
+  { id: 'ps5-pro', label: 'PS5 Pro' },
+  { id: 'series-s', label: 'Series S' },
+  { id: 'series-x', label: 'Series X' },
 ]
 
 export function Ps5Deals({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -36,11 +38,11 @@ export function Ps5Deals({ onOpenSettings }: { onOpenSettings: () => void }) {
     )
   }, [state, model, showOutOfStock])
 
-  if (state.status === 'loading') return <p className="py-16 text-center text-muted">Loading PS5 prices…</p>
+  if (state.status === 'loading') return <p className="py-16 text-center text-muted">Loading console prices…</p>
   if (state.status === 'error')
     return (
       <div className="mx-auto max-w-3xl space-y-4">
-        <Empty icon={<Gamepad2 size={22} />} title="No PS5 prices yet">
+        <Empty icon={<Gamepad2 size={22} />} title="No console prices yet">
           {state.message}
         </Empty>
         <RefreshBar reload={reload} onOpenSettings={onOpenSettings} />
@@ -62,7 +64,10 @@ export function Ps5Deals({ onOpenSettings }: { onOpenSettings: () => void }) {
       <RefreshBar reload={reload} onOpenSettings={onOpenSettings} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Segmented label="Model" options={MODELS} value={model} onChange={setModel} className="w-full sm:w-auto" />
+        {/* Six models don't fit across a phone, so the row scrolls sideways there. */}
+        <div className="-mx-4 w-[calc(100%+2rem)] overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:w-auto sm:px-0">
+          <Segmented label="Model" options={MODELS} value={model} onChange={setModel} className="w-max" />
+        </div>
         {hiddenOutOfStock > 0 && (
           <label className="flex items-center gap-2 text-sm text-muted">
             <input
