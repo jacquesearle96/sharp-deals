@@ -1,12 +1,12 @@
-import { chromium } from 'playwright';
+import { chromium, type Page } from 'playwright';
 import type { Ps5Offer, Ps5StoreId } from '../../../shared/ps5.ts';
 import { requestJson, requestText, sleep, UA } from '../http.ts';
 
 /**
- * TEMPORARY (Black Friday 2026). One small reader per store for PlayStation 5 listings.
+ * TEMPORARY (Black Friday 2026). One small reader per store for PS5 and Xbox Series listings.
  * Each reads only what the store's robots.txt allows: an API or JSON feed where the store offers one,
  * otherwise its console category page (several stores ask crawlers to stay out of their search pages).
- * Readers return every listing they see; run.ts keeps the ones that look like PS5 consoles.
+ * Readers return every listing they see; run.ts keeps the ones that look like consoles.
  */
 export type Listing = Omit<Ps5Offer, 'store'>;
 export type Source = { store: Ps5StoreId; read: () => Promise<Listing[]> };
@@ -48,11 +48,20 @@ interface TakealotSearch {
   };
 }
 
+/** Searches each console separately; the consoles sit on the first pages of their own search. */
+const SEARCHES = ['playstation 5 console', 'xbox series console'];
+
 async function takealot(): Promise<Listing[]> {
   const out: Listing[] = [];
+  for (const q of SEARCHES) out.push(...(await takealotSearch(q, q.startsWith('playstation') ? 3 : 2)));
+  return out;
+}
+
+async function takealotSearch(query: string, pages: number): Promise<Listing[]> {
+  const out: Listing[] = [];
   let after = '';
-  for (let page = 0; page < 3; page++) {
-    const url = `https://api.takealot.com/rest/v-1-14-0/searches/products?qsearch=playstation%205%20console${after ? `&after=${after}` : ''}`;
+  for (let page = 0; page < pages; page++) {
+    const url = `https://api.takealot.com/rest/v-1-14-0/searches/products?qsearch=${encodeURIComponent(query)}${after ? `&after=${after}` : ''}`;
     const data = await requestJson<TakealotSearch>(url);
     for (const r of data.sections.products.results) {
       const { core, buybox_summary: buy, stock_availability_summary: stock } = r.product_views;
@@ -67,8 +76,8 @@ async function takealot(): Promise<Listing[]> {
       });
     }
     after = data.sections.products.paging.next_is_after ?? '';
-    if (!after) break;
     await sleep(DELAY_MS);
+    if (!after) break;
   }
   return out;
 }
@@ -96,10 +105,15 @@ export function parseAmazon(html: string): Listing[] {
 }
 
 async function amazon(): Promise<Listing[]> {
-  const html = await requestText('https://www.amazon.co.za/s?k=playstation+5+console');
-  const found = parseAmazon(html);
-  if (found.length === 0 && /captcha/i.test(html)) throw new Error('Amazon showed a robot check instead of results');
-  return found;
+  const out: Listing[] = [];
+  for (const q of SEARCHES) {
+    const html = await requestText(`https://www.amazon.co.za/s?k=${encodeURIComponent(q).replace(/%20/g, '+')}`);
+    const found = parseAmazon(html);
+    if (found.length === 0 && /captcha/i.test(html)) throw new Error('Amazon showed a robot check instead of results');
+    out.push(...found);
+    await sleep(DELAY_MS);
+  }
+  return out;
 }
 
 // ---------- Game: the JSON API behind its Consoles category ----------
@@ -114,11 +128,16 @@ interface GameSearch {
 }
 
 async function game(): Promise<Listing[]> {
-  const data = await requestJson<GameSearch>(
-    'https://www.game.co.za/occ/v2/game/channel/msite/zone/G205/category/G3102/search?fields=FULL&currentPage=0&pageSize=100',
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: 'playstation 5' }) },
-  );
-  return (data.products ?? []).map((p) => ({
+  const products: NonNullable<GameSearch['products']> = [];
+  for (const query of ['playstation 5', 'xbox series']) {
+    const data = await requestJson<GameSearch>(
+      'https://www.game.co.za/occ/v2/game/channel/msite/zone/G205/category/G3102/search?fields=FULL&currentPage=0&pageSize=100',
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query }) },
+    );
+    products.push(...(data.products ?? []));
+    await sleep(DELAY_MS);
+  }
+  return products.map((p) => ({
     name: p.name,
     price: p.price.value,
     url: `https://www.game.co.za${p.url}`,
@@ -176,9 +195,12 @@ interface WooProduct {
 }
 
 async function btgames(): Promise<Listing[]> {
-  const items = await requestJson<WooProduct[]>(
-    'https://www.btgames.co.za/wp-json/wc/store/v1/products?category=playstation-5-console&per_page=100',
-  );
+  // "consoles" holds every console (Xbox included); the PS5 one is read too in case a console sits only there.
+  const items: WooProduct[] = [];
+  for (const category of ['playstation-5-console', 'consoles']) {
+    items.push(...(await requestJson<WooProduct[]>(`https://www.btgames.co.za/wp-json/wc/store/v1/products?category=${category}&per_page=100`)));
+    await sleep(DELAY_MS);
+  }
   return items.map((p) => {
     const unit = 10 ** p.prices.currency_minor_unit;
     const price = Number(p.prices.price) / unit;
@@ -219,7 +241,14 @@ export function parseLoot(html: string): Listing[] {
   }));
 }
 
-const loot = async () => parseLoot(await requestText('https://www.loot.co.za/search?terms=playstation%205%20console'));
+async function loot(): Promise<Listing[]> {
+  const out: Listing[] = [];
+  for (const q of SEARCHES) {
+    out.push(...parseLoot(await requestText(`https://www.loot.co.za/search?terms=${encodeURIComponent(q)}`)));
+    await sleep(DELAY_MS);
+  }
+  return out;
+}
 
 // ---------- Computer Mania: Shopify collection feeds ----------
 
@@ -260,9 +289,27 @@ async function makro(): Promise<Listing[]> {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   try {
     const page = await (await browser.newContext({ userAgent: UA })).newPage();
-    await page.goto('https://www.makro.co.za/gaming/gaming-consoles/ps5/pr?sid=4rr,x1m,ogz', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    await page.waitForSelector('[data-id] a[title]', { timeout: 30_000 });
-    const tiles = await page.evaluate(() =>
+    const tiles: { name: string; href: string; prices: number[]; soldOut: boolean }[] = [];
+    for (const url of MAKRO_PAGES) {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.waitForSelector('[data-id] a[title]', { timeout: 30_000 });
+      tiles.push(...(await readMakroTiles(page)));
+      await sleep(DELAY_MS);
+    }
+    return makroListings(tiles);
+  } finally {
+    await browser.close();
+  }
+}
+
+/** Makro has a PS5 category; its Xbox Series consoles are only found by filtering all consoles to the Xbox brand. */
+const MAKRO_PAGES = [
+  'https://www.makro.co.za/gaming/gaming-consoles/ps5/pr?sid=4rr,x1m,ogz',
+  'https://www.makro.co.za/gaming/gaming-consoles/pr?sid=4rr%2Cx1m&p%5B%5D=facets.brand%255B%255D%3DXbox',
+];
+
+function readMakroTiles(page: Page) {
+  return page.evaluate(() =>
       [...document.querySelectorAll('[data-id]')].map((t) => {
         const a = t.querySelector('a[title]');
         // Prices show as "R 15,499" with the cents in a separate element; the first is the price, a larger one the old price.
@@ -280,7 +327,10 @@ async function makro(): Promise<Listing[]> {
         };
       }),
     );
-    return tiles
+}
+
+function makroListings(tiles: { name: string; href: string; prices: number[]; soldOut: boolean }[]): Listing[] {
+  return tiles
       .filter((t) => t.name && t.href && t.prices[0])
       .map((t) => ({
         name: t.name,
@@ -290,9 +340,6 @@ async function makro(): Promise<Listing[]> {
         url: `https://www.makro.co.za${t.href.replace(/\?.*$/, '')}`,
         inStock: t.soldOut ? false : undefined,
       }));
-  } finally {
-    await browser.close();
-  }
 }
 
 export const SOURCES: Source[] = [

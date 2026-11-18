@@ -53,13 +53,13 @@ git tag scrape-all && git push origin scrape-all        # everything
 git push origin :refs/tags/scrape-all                   # delete the tag afterwards so the name can be reused
 ```
 
-## PS5 tab (temporary, Black Friday 2026)
+## Consoles tab (temporary, Black Friday 2026)
 
-The **PS5** tab lists every PlayStation 5 console from Takealot, Amazon.co.za, Game, Makro, Incredible, HiFi Corp,
+The **Consoles** tab lists every PlayStation 5 and Xbox Series S/X console from Takealot, Amazon.co.za, Game, Makro, Incredible, HiFi Corp,
 BT Games, Loot, House & Home, OK Furniture and Computer Mania, cheapest first. The `ps5.yml` workflow refreshes it
-every hour during November only. To refresh on demand, tap **Refresh** on the PS5 tab: it reloads the latest prices,
+every hour during November only. To refresh on demand, tap **Refresh** on the Consoles tab: it reloads the latest prices,
 and once GitHub is connected in **Settings** it also starts a fresh check of every store (about 5 minutes). Without a
-token, **Actions > PS5 prices > Run workflow** does the same. Checkers is not
+token, **Actions > Console prices > Run workflow** does the same. Checkers is not
 included: its site blocks automated requests. To run it locally: `cd scraper && node src/ps5/run.ts [store ...]`.
 
 To remove it afterwards, delete `shared/ps5.ts`, `shared/ps5.test.ts`, `scraper/src/ps5/`,
@@ -72,7 +72,7 @@ section), delete `app/src/lib/ps5Feed.ts`, and remove the `ps5.json` exception i
 - **Appearance**: light, dark, or follow the phone.
 - **Toolbar**: hide tabs you don't use (Settings always stays).
 - **Shared list**: create a shared list code or join your partner's.
-- **Grocery & baby stores** and **PS5 stores**: how each store did on its latest run, with a switch to stop scraping it.
+- **Grocery & baby stores** and **Console stores**: how each store did on its latest run, with a switch to stop scraping it.
   A store that is off is skipped by the workflow and its prices are hidden from the app. The switches save to the
   repository variables `GROCERY_STORES_OFF` and `PS5_STORES_OFF` (space-separated store ids), which you can also edit
   under **Settings > Secrets and variables > Actions > Variables**. **Run now** starts that scrape straight away.

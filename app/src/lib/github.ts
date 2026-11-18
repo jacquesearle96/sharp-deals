@@ -172,7 +172,7 @@ export function describeRun(run: Run | undefined, workflow: WorkflowId = 'ps5'):
     case 'requested':
       return workflow === 'ps5'
         ? 'Queued. If the grocery scrape is running, this waits for it to finish.'
-        : 'Queued. If a PS5 check is running, this waits for it to finish.'
+        : 'Queued. If a console price check is running, this waits for it to finish.'
     case 'in_progress':
       return workflow === 'ps5' ? 'Checking all stores now. This usually takes about 5 minutes.' : 'Scraping every store now. This takes about an hour.'
     case 'completed':

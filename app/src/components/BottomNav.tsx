@@ -17,7 +17,7 @@ export const TABS: TabInfo[] = [
   { id: 'deals', label: 'Top deals', title: 'Top deals', icon: Flame },
   { id: 'shop', label: 'Shop', title: 'Shop around', icon: ShoppingBag },
   // TEMPORARY (Black Friday 2026)
-  { id: 'ps5', label: 'PS5', title: 'PS5 prices', icon: Gamepad2 },
+  { id: 'ps5', label: 'Consoles', title: 'Consoles', icon: Gamepad2 },
   { id: 'list', label: 'My list', title: 'My list', icon: ShoppingBasket },
   { id: 'settings', label: 'Settings', title: 'Settings', icon: Settings },
 ]
