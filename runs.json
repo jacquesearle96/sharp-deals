@@ -1,0 +1,78 @@
+[
+ {
+  "store": "pnp",
+  "ok": true,
+  "count": 10951,
+  "at": "2026-11-21T07:25:25.111Z",
+  "notes": []
+ },
+ {
+  "store": "checkers",
+  "ok": true,
+  "count": 1824,
+  "at": "2026-11-21T05:42:31.454Z",
+  "notes": [
+   "found 1427; kept 397 unexpired items from the last run"
+  ]
+ },
+ {
+  "store": "woolworths",
+  "ok": true,
+  "count": 3024,
+  "at": "2026-11-21T07:31:38.881Z",
+  "notes": []
+ },
+ {
+  "store": "foodlovers",
+  "ok": true,
+  "count": 139,
+  "at": "2026-11-21T05:44:00.282Z",
+  "notes": [
+   "found 129; kept 10 unexpired items from the last run"
+  ]
+ },
+ {
+  "store": "spar",
+  "ok": true,
+  "count": 10,
+  "at": "2026-11-21T07:47:33.599Z",
+  "notes": []
+ },
+ {
+  "store": "clicks",
+  "ok": true,
+  "count": 479,
+  "at": "2026-11-20T20:49:17.566Z",
+  "notes": [
+   "no products on /health-and-pharmacy/c/OH10005?q=%3Arele: title \"Attention Required! | Cloudflare\" at https://clicks.co.za/health-and-pharmacy/c/OH10005?q=%3Arelevance%3ApromoStickerplp%3A2%3A; text: Sorry, you have been blocked You are unable to access clicks.co.za Why have I been blocked? This webs",
+   "no products on /toiletries/c/OH10010?q=%3Arelevance%3Ap: title \"Attention Required! | Cloudflare\" at https://clicks.co.za/toiletries/c/OH10010?q=%3Arelevance%3ApromoStickerplp%3A1%3ApromoStic; text: Sorry, you have been blocked You are unable to access clicks.co.za Why have I been blocked? This webs",
+   "no products on /beauty/c/OH10001?q=%3Arelevance%3Apromo: title \"Attention Required! | Cloudflare\" at https://clicks.co.za/beauty/c/OH10001?q=%3Arelevance%3ApromoStickerplp%3A2%3ApromoStickerp; text: Sorry, you have been blocked You are unable to access clicks.co.za Why have I been blocked? This webs",
+   "no products on /products/c/OH1?q=%3Arelevance%3Acategor: title \"Attention Required! | Cloudflare\" at https://clicks.co.za/products/c/OH1?q=%3Arelevance%3Acategory%3AOH10008%3ApromoStickerplp%; text: Sorry, you have been blocked You are unable to access clicks.co.za Why have I been blocked? This webs"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "dischem",
+  "ok": true,
+  "count": 354,
+  "at": "2026-10-31T05:05:47.087Z",
+  "notes": [
+   "no products on https://www.dischem.co.za/on-promotion: title \"Just a moment...\" at https://www.dischem.co.za/on-promotion?p=1; text: www.dischem.co.za Performing security verification This website uses a security service to protect against malicious bot"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "babycity",
+  "ok": true,
+  "count": 2921,
+  "at": "2026-11-21T07:47:41.603Z",
+  "notes": []
+ },
+ {
+  "store": "babiesrus",
+  "ok": true,
+  "count": 2297,
+  "at": "2026-11-21T07:56:36.227Z",
+  "notes": []
+ }
+]
