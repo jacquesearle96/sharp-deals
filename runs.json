@@ -1,0 +1,20 @@
+[
+ {
+  "store": "checkers",
+  "ok": true,
+  "count": 1824,
+  "at": "2026-11-21T05:42:31.454Z",
+  "notes": [
+   "found 1427; kept 397 unexpired items from the last run"
+  ]
+ },
+ {
+  "store": "foodlovers",
+  "ok": true,
+  "count": 139,
+  "at": "2026-11-21T05:44:00.282Z",
+  "notes": [
+   "found 129; kept 10 unexpired items from the last run"
+  ]
+ }
+]
