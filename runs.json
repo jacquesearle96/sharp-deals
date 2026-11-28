@@ -1,0 +1,79 @@
+[
+ {
+  "store": "pnp",
+  "ok": true,
+  "count": 10980,
+  "at": "2026-11-28T08:04:32.703Z",
+  "notes": []
+ },
+ {
+  "store": "checkers",
+  "ok": true,
+  "count": 1884,
+  "at": "2026-11-25T05:41:50.292Z",
+  "notes": [
+   "page 1 showed no offers after 3 tries: HTTP 403, title \"Just a moment...\", 5664 bytes at https://www.cataloguespecials.co.za/stores/checkers/specials?page=1",
+   "page 2 showed no offers after 3 tries: HTTP 403, title \"Just a moment...\", 5664 bytes at https://www.cataloguespecials.co.za/stores/checkers/specials?page=2"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "woolworths",
+  "ok": true,
+  "count": 3065,
+  "at": "2026-11-28T08:10:04.912Z",
+  "notes": []
+ },
+ {
+  "store": "foodlovers",
+  "ok": true,
+  "count": 280,
+  "at": "2026-11-25T05:43:19.345Z",
+  "notes": [
+   "page 1 showed no offers after 3 tries: HTTP 403, title \"Just a moment...\", 5697 bytes at https://www.cataloguespecials.co.za/stores/food-lover-s-market/specials?page=1",
+   "page 2 showed no offers after 3 tries: HTTP 403, title \"Just a moment...\", 5697 bytes at https://www.cataloguespecials.co.za/stores/food-lover-s-market/specials?page=2"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "spar",
+  "ok": true,
+  "count": 13,
+  "at": "2026-11-28T08:26:52.715Z",
+  "notes": []
+ },
+ {
+  "store": "clicks",
+  "ok": true,
+  "count": 635,
+  "at": "2026-11-28T08:21:57.749Z",
+  "notes": []
+ },
+ {
+  "store": "dischem",
+  "ok": true,
+  "count": 354,
+  "at": "2026-10-31T05:05:47.087Z",
+  "notes": [
+   "no products on https://www.dischem.co.za/on-promotion: title \"Just a moment...\" at https://www.dischem.co.za/on-promotion?p=1; text: www.dischem.co.za Performing security verification This website uses a security service to protect against malicious bot"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "babycity",
+  "ok": true,
+  "count": 2917,
+  "at": "2026-11-28T08:27:00.762Z",
+  "notes": []
+ },
+ {
+  "store": "babiesrus",
+  "ok": true,
+  "count": 2223,
+  "at": "2026-11-28T08:35:58.142Z",
+  "notes": [
+   "no products on https://www.babiesrus.co.za/dynamite-deals: title \"Dynamite Deals | Babies R Us Online\" at https://www.babiesrus.co.za/dynamite-deals?p=1; text: Skip to Content Stores Help My Account Sign In Register My Cart R 0.00 Your Cart It seems like your cart could use some ",
+   "no products on https://www.babiesrus.co.za/promotions/bundles: title \"Just a moment...\" at https://www.babiesrus.co.za/catalogsearch/result/?q=promotions+bundles&amnoroute; text: www.babiesrus.co.za Performing security verification This website uses a security service to protect against malicious b"
+  ]
+ }
+]
