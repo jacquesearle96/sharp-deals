@@ -1,0 +1,24 @@
+[
+ {
+  "store": "checkers",
+  "ok": true,
+  "count": 1884,
+  "at": "2026-11-25T05:41:50.292Z",
+  "notes": [
+   "page 1 showed no offers after 3 tries: HTTP 403, title \"Just a moment...\", 5664 bytes at https://www.cataloguespecials.co.za/stores/checkers/specials?page=1",
+   "page 2 showed no offers after 3 tries: HTTP 403, title \"Just a moment...\", 5664 bytes at https://www.cataloguespecials.co.za/stores/checkers/specials?page=2"
+  ],
+  "error": "Error: adapter returned no products"
+ },
+ {
+  "store": "foodlovers",
+  "ok": true,
+  "count": 280,
+  "at": "2026-11-25T05:43:19.345Z",
+  "notes": [
+   "page 1 showed no offers after 3 tries: HTTP 403, title \"Just a moment...\", 5697 bytes at https://www.cataloguespecials.co.za/stores/food-lover-s-market/specials?page=1",
+   "page 2 showed no offers after 3 tries: HTTP 403, title \"Just a moment...\", 5697 bytes at https://www.cataloguespecials.co.za/stores/food-lover-s-market/specials?page=2"
+  ],
+  "error": "Error: adapter returned no products"
+ }
+]
